@@ -63,7 +63,7 @@ func main() {
 	authService := authsvc.New(userService, cfg)
 	settingService := settingsvc.New(users, oauths, sessions, pool)
 	listService := listsvc.New()
-	devService := devsvc.New()
+	devService := devsvc.New(games)
 
 	r := handler.NewRouter(
 		authhandler.New(authService, cfg),
