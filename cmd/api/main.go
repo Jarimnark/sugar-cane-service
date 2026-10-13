@@ -17,7 +17,9 @@ import (
 	listhandler "github.com/Jarimnark/sugar-cane-service/internal/handler/list"
 	settinghandler "github.com/Jarimnark/sugar-cane-service/internal/handler/setting"
 	gamerepo "github.com/Jarimnark/sugar-cane-service/internal/repository/game"
+	likerepo "github.com/Jarimnark/sugar-cane-service/internal/repository/like"
 	oauthrepo "github.com/Jarimnark/sugar-cane-service/internal/repository/oauth"
+	savedgamerepo "github.com/Jarimnark/sugar-cane-service/internal/repository/savedgame"
 	sessionrepo "github.com/Jarimnark/sugar-cane-service/internal/repository/session"
 	userrepo "github.com/Jarimnark/sugar-cane-service/internal/repository/user"
 	authsvc "github.com/Jarimnark/sugar-cane-service/internal/service/auth"
@@ -57,12 +59,14 @@ func main() {
 	games := gamerepo.New(q)
 	users := userrepo.New(q)
 	oauths := oauthrepo.New(q)
+	likes := likerepo.New(q)
+	saved := savedgamerepo.New(q)
 
 	userService := usersvc.New(users, sessions, oauths, pool)
 	gameService := gamesvc.New(games, sessions, q)
 	authService := authsvc.New(userService, cfg)
 	settingService := settingsvc.New(users, oauths, sessions, pool)
-	listService := listsvc.New()
+	listService := listsvc.New(likes, saved, pool)
 	devService := devsvc.New(games)
 
 	r := handler.NewRouter(
