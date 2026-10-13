@@ -166,3 +166,35 @@ gameService := gamesvc.New(games, sessions, q)
 - `internal/service/game/impl.go` — full implementation of all 8 service methods
 - `internal/service/game/game_test.go` — 9 unit tests (GetGame, RecordEvent, RelatedGames, List); all passing
 - `cmd/api/main.go` — updated gamesvc.New call to pass q; wired likerepo/savedgamerepo for listsvc (pre-existing wiring gap)
+
+---
+
+# Dev Agent Notes
+
+## devsvc.New() signature
+```go
+devsvc.New(games gamerepo.Repository) devsvc.Service
+```
+
+## Imports needed in main.go
+```go
+devsvc   "github.com/Jarimnark/sugar-cane-service/internal/service/dev"
+gamerepo "github.com/Jarimnark/sugar-cane-service/internal/repository/game"
+```
+Both already present in `main.go`. The call site was updated: `devsvc.New(games)`.
+
+## New DTO
+`pkg/dto/game/dto.go` now has `CreateOrUpdateGameRequest`.
+If `ID` field is empty string → create new game; if `ID` is a UUID string → update existing game.
+
+## Handler change
+`POST /me/game` now responds `200 OK` for both create and update (was `201 Created`).
+The `?action=` query param has been removed; action is inferred from the presence of `ID` in the request body.
+
+## Files created/modified by this agent
+- `pkg/dto/game/dto.go` — added `CreateOrUpdateGameRequest`
+- `internal/service/dev/service.go` — updated interface (removed `action` param, uses new DTO)
+- `internal/service/dev/impl.go` — fully implemented (replaces stub), constructor takes `gamerepo.Repository`
+- `internal/handler/dev/routes.go` — updated `CreateOrUpdateGame` handler (uses new DTO, drops `action` param, 200 response)
+- `internal/service/dev/dev_test.go` — 16 unit tests, all passing
+- `cmd/api/main.go` — minimal fix: `devsvc.New()` → `devsvc.New(games)`
