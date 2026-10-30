@@ -126,6 +126,15 @@ jobs:
           source: ${{ env.ENV_FILE }}
           target: /opt/sugarcane/${{ env.PROJECT_SUBDIR }}/
 
+      - name: Upload compose + Caddyfile to droplet
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ steps.host.outputs.deploy_host }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          source: "docker-compose.prod.yml,caddy/Caddyfile"
+          target: /opt/sugarcane/${{ env.PROJECT_SUBDIR }}/
+
       - name: Clean local env tmpfile
         if: always()
         run: rm -f "$ENV_FILE"
