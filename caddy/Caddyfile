@@ -1,0 +1,60 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# SugarCane Caddy config
+#
+# Two modes:
+#   1. IP-based (dev, no domain yet): HTTP only on :80 with /api/* path routing.
+#      Access the app at http://<droplet-ip>/   and the API at http://<droplet-ip>/api/*
+#   2. Domain-based (prod, or dev once a domain is purchased): HTTPS vhosts
+#      with automatic Let's Encrypt. Uncomment the DOMAIN BLOCK section below
+#      and set DOMAIN / ACME_EMAIL in the env file.
+# ──────────────────────────────────────────────────────────────────────────────
+
+{
+	# Global options. Email is only used by the DOMAIN BLOCK; harmless if unset.
+	email {$ACME_EMAIL:admin@example.invalid}
+	{$ACME_CA}
+	# When no domain is set we don't want Caddy auto-upgrading HTTP → HTTPS.
+	auto_https off
+}
+
+# ─── IP MODE (default) ───────────────────────────────────────────────────────
+:80 {
+	handle_path /api/* {
+		reverse_proxy {$CADDY_INGRESS_API}
+	}
+	handle {
+		reverse_proxy {$CADDY_INGRESS_WEB}
+	}
+	encode zstd gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
+
+# ─── DOMAIN BLOCK (uncomment when DOMAIN is set) ─────────────────────────────
+# Remove `auto_https off` above when enabling this.
+#
+# staging.{$DOMAIN}, api.staging.{$DOMAIN} {
+#     @api host api.staging.{$DOMAIN}
+#     handle @api { reverse_proxy {$CADDY_INGRESS_API} }
+#     handle     { reverse_proxy {$CADDY_INGRESS_WEB} }
+#     encode zstd gzip
+#     header {
+#         Strict-Transport-Security "max-age=31536000; includeSubDomains"
+#         X-Content-Type-Options nosniff
+#         Referrer-Policy strict-origin-when-cross-origin
+#     }
+# }
+#
+# {$DOMAIN}, api.{$DOMAIN} {
+#     @api host api.{$DOMAIN}
+#     handle @api { reverse_proxy {$CADDY_INGRESS_API} }
+#     handle     { reverse_proxy {$CADDY_INGRESS_WEB} }
+#     encode zstd gzip
+#     header {
+#         Strict-Transport-Security "max-age=31536000; includeSubDomains"
+#         X-Content-Type-Options nosniff
+#         Referrer-Policy strict-origin-when-cross-origin
+#     }
+# }
