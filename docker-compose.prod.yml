@@ -37,6 +37,8 @@ services:
     image: ghcr.io/${WEB_IMAGE}:${WEB_TAG:-latest}
     restart: unless-stopped
     env_file: .env
+    environment:
+      PORT: "3000"
     ports:
       - "127.0.0.1:${WEB_PORT:-3000}:3000"
     expose:
