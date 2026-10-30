@@ -98,6 +98,8 @@ jobs:
       PROFILE_FLAG: ${{ github.ref_name == 'main' && '' || '--profile staging' }}
 
     steps:
+      - uses: actions/checkout@v4
+
       - name: Resolve deploy host
         id: host
         run: |
