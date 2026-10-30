@@ -114,9 +114,8 @@ jobs:
           ENV_B64: ${{ steps.host.outputs.env_b64 }}
         run: |
           set -e
-          mkdir -p /tmp/envdir
-          echo "$ENV_B64" | base64 -d > /tmp/envdir/$ENV_FILE
-          chmod 600 /tmp/envdir/$ENV_FILE
+          echo "$ENV_B64" | base64 -d > "$ENV_FILE"
+          chmod 600 "$ENV_FILE"
 
       - name: Upload env file to droplet
         uses: appleboy/scp-action@v0.1.7
@@ -124,13 +123,12 @@ jobs:
           host: ${{ steps.host.outputs.deploy_host }}
           username: ${{ secrets.DROPLET_USER }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
-          source: /tmp/envdir/${{ env.ENV_FILE }}
+          source: ${{ env.ENV_FILE }}
           target: /opt/sugarcane/${{ env.PROJECT_SUBDIR }}/
-          strip_components: 2
 
       - name: Clean local env tmpfile
         if: always()
-        run: rm -f /tmp/envdir/$ENV_FILE
+        run: rm -f "$ENV_FILE"
 
       - name: Migrate & Restart
         uses: appleboy/ssh-action@v1
