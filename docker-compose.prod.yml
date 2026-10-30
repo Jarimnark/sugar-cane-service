@@ -24,9 +24,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_started
-        required: false
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz || exit 1"]
       interval: 30s
@@ -66,20 +63,6 @@ services:
     networks:
       - internal
 
-  minio:
-    image: quay.io/minio/minio:latest
-    command: server /data --console-address ":9001"
-    restart: unless-stopped
-    profiles: ["staging"]
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
-    volumes:
-      - miniodata:/data
-    mem_limit: 256m
-    networks:
-      - internal
-
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -103,7 +86,6 @@ services:
 
 volumes:
   pgdata:
-  miniodata:
   caddy_data:
   caddy_config:
 

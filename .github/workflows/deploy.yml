@@ -95,7 +95,7 @@ jobs:
       PROJECT_SUBDIR: ${{ github.ref_name == 'main' && 'prod' || 'staging' }}
       ENV_FILE: .env
       APP_TAG: ${{ github.ref_name == 'main' && 'latest' || 'develop' }}
-      PROFILE_FLAG: ${{ github.ref_name == 'main' && '' || '--profile staging' }}
+      PROFILE_FLAG: ''
 
     steps:
       - uses: actions/checkout@v4
