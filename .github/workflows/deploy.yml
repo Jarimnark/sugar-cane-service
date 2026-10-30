@@ -158,11 +158,12 @@ jobs:
 
             $COMPOSE pull app
 
+            DB_URL="$(grep ^DATABASE_URL $ENV_FILE | cut -d= -f2-)"
             $COMPOSE run --rm \
-              -e DATABASE_URL="$(grep ^DATABASE_URL $ENV_FILE | cut -d= -f2-)" \
+              -e DATABASE_URL="$DB_URL" \
               -e APP_TAG=$APP_TAG \
               app \
-              goose -dir db/migrations postgres "$DATABASE_URL" up
+              sh -c 'goose -dir db/migrations postgres "$DATABASE_URL" up'
 
             $COMPOSE up -d
 
