@@ -115,7 +115,7 @@ jobs:
         run: |
           set -e
           echo "$ENV_B64" | base64 -d > "$ENV_FILE"
-          chmod 600 "$ENV_FILE"
+          chmod 644 "$ENV_FILE"
 
       - name: Upload env file to droplet
         uses: appleboy/scp-action@v0.1.7
