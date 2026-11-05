@@ -38,6 +38,10 @@ func Internal(err error) *AppError {
 	return NewAppError(http.StatusInternalServerError, "internal server error", err)
 }
 
+func ServiceUnavailable(msg string) *AppError {
+	return NewAppError(http.StatusServiceUnavailable, msg, nil)
+}
+
 func AsAppError(err error) (*AppError, bool) {
 	var ae *AppError
 	return ae, errors.As(err, &ae)

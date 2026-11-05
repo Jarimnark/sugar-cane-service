@@ -59,10 +59,15 @@ func main() {
 
 	storageClient, err := storage.New(context.Background(), cfg)
 	if err != nil {
-		slog.Error("storage init", "error", err)
-		os.Exit(1)
+		// Non-fatal: upload handlers null-check h.storage and return 503.
+		// Boot the rest of the app so the public site stays reachable even when
+		// the S3 endpoint is misconfigured or temporarily unreachable.
+		slog.Warn("storage init failed; uploads will be disabled",
+			"error", err, "endpoint", cfg.S3Endpoint, "bucket", cfg.S3Bucket)
+		storageClient = nil
+	} else {
+		slog.Info("storage connected", "bucket", cfg.S3Bucket)
 	}
-	slog.Info("storage connected", "bucket", cfg.S3Bucket)
 
 	q := sqlcgen.New(pool)
 

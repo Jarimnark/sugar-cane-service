@@ -29,7 +29,7 @@ func (h *Handler) UploadScreenshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.storage == nil {
-		httputil.RespondError(w, domain.Internal(nil))
+		httputil.RespondError(w, domain.ServiceUnavailable("file uploads are not configured on this environment"))
 		return
 	}
 
