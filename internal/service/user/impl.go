@@ -147,7 +147,6 @@ func (s *svc) UpdateProfile(ctx context.Context, userID pgtype.UUID, req userdto
 		ID:          userID,
 		DisplayName: req.DisplayName,
 		Bio:         pgtype.Text{String: req.Bio, Valid: req.Bio != ""},
-		PhotoUrl:    pgtype.Text{},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("UpdateProfile: %w", err)
@@ -206,13 +205,11 @@ func (s *svc) createOAuthUser(ctx context.Context, email, displayName, photoURL,
 		return sqlcgen.User{}, fmt.Errorf("createOAuthUser: create user: %w", err)
 	}
 
-	// Update photo_url if provided (CreateUser doesn't include it).
+	// Set photo_url from the OAuth provider (CreateUser doesn't include it).
 	if photo.Valid {
-		user, err = s.users.UpdateProfile(txCtx, sqlcgen.UpdateUserProfileParams{
-			ID:          user.ID,
-			DisplayName: user.DisplayName,
-			Bio:         user.Bio,
-			PhotoUrl:    photo,
+		user, err = s.users.UpdatePhoto(txCtx, sqlcgen.UpdateUserPhotoParams{
+			ID:       user.ID,
+			PhotoUrl: photo,
 		})
 		if err != nil {
 			return sqlcgen.User{}, fmt.Errorf("createOAuthUser: set photo: %w", err)

@@ -13,8 +13,14 @@ SELECT * FROM users WHERE email = $1 AND deleted_at IS NULL;
 UPDATE users
 SET display_name = $2,
     bio          = $3,
-    photo_url    = $4,
     updated_at   = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: UpdateUserPhoto :one
+UPDATE users
+SET photo_url  = $2,
+    updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 

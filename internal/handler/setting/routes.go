@@ -14,8 +14,11 @@ import (
 func (h *Handler) MountAuthed(r chi.Router) {
 	r.Post("/me/profile", h.CreateProfile)
 	r.Patch("/me", h.UpdateMe)
+	r.Get("/me/connections", h.ListConnections)
 	r.Post("/me/connection/{provider}", h.AddConnection)
 	r.Delete("/me/connection/{provider}", h.RemoveConnection)
+	r.Get("/me/sessions", h.ListSessions)
+	r.Delete("/me/sessions", h.LogoutEverywhere)
 	r.Delete("/me", h.DeleteAccount)
 }
 
@@ -92,6 +95,47 @@ func (h *Handler) DeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.svc.DeleteAccount(r.Context(), userID); err != nil {
+		httputil.RespondError(w, err)
+		return
+	}
+	httputil.Respond(w, http.StatusNoContent, nil)
+}
+
+func (h *Handler) ListConnections(w http.ResponseWriter, r *http.Request) {
+	userID, ok := appmw.UserIDFromCtx(r.Context())
+	if !ok {
+		httputil.RespondError(w, domain.Unauthorized("not authenticated"))
+		return
+	}
+	items, err := h.svc.ListConnections(r.Context(), userID)
+	if err != nil {
+		httputil.RespondError(w, err)
+		return
+	}
+	httputil.Respond(w, http.StatusOK, items)
+}
+
+func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
+	session, ok := appmw.SessionFromCtx(r.Context())
+	if !ok {
+		httputil.RespondError(w, domain.Unauthorized("not authenticated"))
+		return
+	}
+	resp, err := h.svc.ListSessions(r.Context(), session.UserID, session.ID)
+	if err != nil {
+		httputil.RespondError(w, err)
+		return
+	}
+	httputil.Respond(w, http.StatusOK, resp)
+}
+
+func (h *Handler) LogoutEverywhere(w http.ResponseWriter, r *http.Request) {
+	session, ok := appmw.SessionFromCtx(r.Context())
+	if !ok {
+		httputil.RespondError(w, domain.Unauthorized("not authenticated"))
+		return
+	}
+	if err := h.svc.LogoutEverywhere(r.Context(), session.UserID, session.ID); err != nil {
 		httputil.RespondError(w, err)
 		return
 	}

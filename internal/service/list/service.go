@@ -11,7 +11,7 @@ import (
 type Service interface {
 	LikeGame(ctx context.Context, userID pgtype.UUID, gameID string) error
 	UnlikeGame(ctx context.Context, userID pgtype.UUID, gameID string) error
-	GetMyList(ctx context.Context, userID pgtype.UUID, sort string) ([]gamedto.GameResponse, error)
+	GetMyList(ctx context.Context, userID pgtype.UUID) ([]gamedto.GameResponse, error)
 	AddToList(ctx context.Context, userID pgtype.UUID, gameID string) error
 	RemoveFromList(ctx context.Context, userID pgtype.UUID, gameID string) error
 }

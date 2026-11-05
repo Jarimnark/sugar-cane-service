@@ -25,6 +25,84 @@ func (q *Queries) DeleteOAuthAccountByUserAndProvider(ctx context.Context, arg D
 	return err
 }
 
+const deleteUserSessionsExcept = `-- name: DeleteUserSessionsExcept :exec
+DELETE FROM sessions WHERE user_id = $1 AND id <> $2
+`
+
+type DeleteUserSessionsExceptParams struct {
+	UserID pgtype.UUID `json:"user_id"`
+	ID     string      `json:"id"`
+}
+
+func (q *Queries) DeleteUserSessionsExcept(ctx context.Context, arg DeleteUserSessionsExceptParams) error {
+	_, err := q.db.Exec(ctx, deleteUserSessionsExcept, arg.UserID, arg.ID)
+	return err
+}
+
+const listOAuthAccountsByUser = `-- name: ListOAuthAccountsByUser :many
+SELECT id, user_id, provider, provider_id, created_at FROM oauth_accounts WHERE user_id = $1 ORDER BY created_at
+`
+
+func (q *Queries) ListOAuthAccountsByUser(ctx context.Context, userID pgtype.UUID) ([]OauthAccount, error) {
+	rows, err := q.db.Query(ctx, listOAuthAccountsByUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []OauthAccount
+	for rows.Next() {
+		var i OauthAccount
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Provider,
+			&i.ProviderID,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listUserSessions = `-- name: ListUserSessions :many
+SELECT id, user_id, ip_address, user_agent, last_used_at, created_at, expires_at FROM sessions
+WHERE user_id = $1 AND expires_at > NOW()
+ORDER BY last_used_at DESC
+`
+
+func (q *Queries) ListUserSessions(ctx context.Context, userID pgtype.UUID) ([]Session, error) {
+	rows, err := q.db.Query(ctx, listUserSessions, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Session
+	for rows.Next() {
+		var i Session
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.IpAddress,
+			&i.UserAgent,
+			&i.LastUsedAt,
+			&i.CreatedAt,
+			&i.ExpiresAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const softDeleteUser = `-- name: SoftDeleteUser :exec
 UPDATE users SET deleted_at = NOW() WHERE id = $1
 `

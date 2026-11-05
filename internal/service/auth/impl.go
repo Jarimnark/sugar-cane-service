@@ -111,7 +111,13 @@ func fetchGoogleUser(client *http.Client) (id, email, displayName, photoURL stri
 		return "", "", "", "", fmt.Errorf("fetchGoogleUser: %w", err)
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return "", "", "", "", fmt.Errorf("fetchGoogleUser: provider returned status %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", "", "", "", fmt.Errorf("fetchGoogleUser: read body: %w", err)
+	}
 
 	var info struct {
 		ID      string `json:"id"`
@@ -122,6 +128,9 @@ func fetchGoogleUser(client *http.Client) (id, email, displayName, photoURL stri
 	if err := json.Unmarshal(body, &info); err != nil {
 		return "", "", "", "", fmt.Errorf("fetchGoogleUser: parse response: %w", err)
 	}
+	if info.ID == "" {
+		return "", "", "", "", fmt.Errorf("fetchGoogleUser: provider returned empty user id")
+	}
 	return info.ID, info.Email, info.Name, info.Picture, nil
 }
 
@@ -131,7 +140,13 @@ func fetchFacebookUser(client *http.Client) (id, email, displayName, photoURL st
 		return "", "", "", "", fmt.Errorf("fetchFacebookUser: %w", err)
 	}
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return "", "", "", "", fmt.Errorf("fetchFacebookUser: provider returned status %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", "", "", "", fmt.Errorf("fetchFacebookUser: read body: %w", err)
+	}
 
 	var info struct {
 		ID      string `json:"id"`
@@ -145,6 +160,9 @@ func fetchFacebookUser(client *http.Client) (id, email, displayName, photoURL st
 	}
 	if err := json.Unmarshal(body, &info); err != nil {
 		return "", "", "", "", fmt.Errorf("fetchFacebookUser: parse response: %w", err)
+	}
+	if info.ID == "" {
+		return "", "", "", "", fmt.Errorf("fetchFacebookUser: provider returned empty user id")
 	}
 	return info.ID, info.Email, info.Name, info.Picture.Data.URL, nil
 }

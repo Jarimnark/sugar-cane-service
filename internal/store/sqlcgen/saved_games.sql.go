@@ -40,7 +40,7 @@ func (q *Queries) InsertSavedGame(ctx context.Context, arg InsertSavedGameParams
 }
 
 const listSavedGamesByUser = `-- name: ListSavedGamesByUser :many
-SELECT g.id, g.owner_id, g.slug, g.name, g.link_web, g.link_android, g.link_ios, g.domain, g.dev, g.pitch, g.description, g.bg, g.players, g.tags, g.status, g.like_count, g.visit_count, g.badge, g.created_at, g.updated_at FROM saved_games sg
+SELECT g.id, g.owner_id, g.slug, g.name, g.link_web, g.link_android, g.link_ios, g.domain, g.dev, g.pitch, g.description, g.bg, g.players, g.tags, g.status, g.like_count, g.visit_count, g.badge, g.created_at, g.updated_at, g.video_links, g.screenshots, g.banner_url, g.play_style FROM saved_games sg
 JOIN games g ON g.id = sg.game_id
 WHERE sg.user_id = $1
 ORDER BY sg.saved_at DESC
@@ -76,6 +76,10 @@ func (q *Queries) ListSavedGamesByUser(ctx context.Context, userID pgtype.UUID) 
 			&i.Badge,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.VideoLinks,
+			&i.Screenshots,
+			&i.BannerUrl,
+			&i.PlayStyle,
 		); err != nil {
 			return nil, err
 		}

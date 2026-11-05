@@ -52,8 +52,7 @@ func (h *Handler) GetMyList(w http.ResponseWriter, r *http.Request) {
 		httputil.RespondError(w, domain.Unauthorized("not authenticated"))
 		return
 	}
-	sort := r.URL.Query().Get("sort")
-	resp, err := h.svc.GetMyList(r.Context(), userID, sort)
+	resp, err := h.svc.GetMyList(r.Context(), userID)
 	if err != nil {
 		httputil.RespondError(w, err)
 		return

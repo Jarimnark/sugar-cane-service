@@ -14,4 +14,7 @@ type Service interface {
 	AddConnection(ctx context.Context, userID pgtype.UUID, provider string) error
 	RemoveConnection(ctx context.Context, userID pgtype.UUID, provider string) error
 	DeleteAccount(ctx context.Context, userID pgtype.UUID) error
+	ListConnections(ctx context.Context, userID pgtype.UUID) ([]userdto.ConnectionListItem, error)
+	ListSessions(ctx context.Context, userID pgtype.UUID, currentSessionID string) (*userdto.SessionListResponse, error)
+	LogoutEverywhere(ctx context.Context, userID pgtype.UUID, currentSessionID string) error
 }

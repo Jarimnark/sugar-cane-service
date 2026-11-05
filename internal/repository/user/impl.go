@@ -41,6 +41,10 @@ func (r *repo) UpdateProfile(ctx context.Context, params sqlcgen.UpdateUserProfi
 	return r.queries(ctx).UpdateUserProfile(ctx, params)
 }
 
+func (r *repo) UpdatePhoto(ctx context.Context, params sqlcgen.UpdateUserPhotoParams) (sqlcgen.User, error) {
+	return r.queries(ctx).UpdateUserPhoto(ctx, params)
+}
+
 func (r *repo) VerifyEmail(ctx context.Context, id pgtype.UUID) error {
 	return r.queries(ctx).VerifyUserEmail(ctx, id)
 }

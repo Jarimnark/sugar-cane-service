@@ -69,6 +69,73 @@ These keep the app deployable later without rework:
 | `CORS_ORIGIN` | `http://localhost:3000` |
 | `S3_ENDPOINT` / `S3_BUCKET` | `http://localhost:9000` / `sugarcane` |
 
+## Running locally
+
+The Go app runs natively on your host; Postgres and MinIO run in Docker.
+
+### Prereqs
+
+- Docker + Docker Compose
+- Go toolchain
+- `goose` and `sqlc`: `make install-tools`
+
+### First-time setup
+
+```bash
+cp .env.example .env
+# edit DATABASE_URL to use host port 6391 (compose maps 6391 → 5432):
+#   postgres://app:app@localhost:6391/sugarcane?sslmode=disable
+
+docker compose up -d           # start postgres + minio
+make migrate-up                # run goose migrations
+make run                       # start the API on :8080
+```
+
+The `make` targets auto-load `.env` (`set -a; . ./.env; set +a`) so you don't need to export vars yourself. Override with `make run ENV_FILE=.env.staging` to use a different file.
+
+### MinIO bucket
+
+The compose file sets `MINIO_DEFAULT_BUCKETS: sugarcane`, so the `sugarcane` bucket is auto-created on first start. The console is at `http://localhost:9001` (login: `minioadmin` / `minioadmin`).
+
+### MinIO image note (important — don't swap it back)
+
+We use `bitnamilegacy/minio:latest`, **not** `minio/minio` or `quay.io/minio/minio`. Context:
+
+- `minio/minio` on Docker Hub was removed by MinIO Inc.
+- `quay.io/minio/minio` (both `:latest` and pinned release tags) now requires a Quay login — MinIO is pushing users toward their paid Enterprise product.
+- `bitnami/minio` was moved behind the paid "Bitnami Secure" tier after Broadcom's acquisition in 2025.
+- `bitnamilegacy/*` is Bitnami's publicly-accessible archive namespace. Free, no auth, drop-in S3-compatible.
+
+If `bitnamilegacy` is ever retired, the fallback is to create a free Quay account, `docker login quay.io`, and switch to `quay.io/minio/minio:RELEASE.<date>`.
+
+Prod uses Cloudflare R2 anyway (same S3 API), so this only matters for local dev.
+
+### Everyday commands
+
+```bash
+make run                       # start the API (loads .env)
+make test                      # go test ./...
+make lint                      # go build + go vet
+make sqlc                      # regenerate sqlc after editing db/queries/*.sql
+make migrate-up                # run new migrations
+make migrate-status            # check migration state
+
+docker compose ps              # see what's running
+docker compose logs minio -f   # tail minio logs
+docker compose stop            # stop (keeps data in volumes)
+docker compose down -v         # nuke everything incl. volumes (destructive!)
+```
+
+### Connecting the frontend
+
+The Next.js app (`sugar-cane-web`) runs on `http://localhost:3000`. The backend `.env` has `CORS_ORIGIN=http://localhost:3000` and `COOKIE_DOMAIN=localhost` / `COOKIE_SECURE=false` so session cookies work over plain HTTP in dev. The frontend must send requests with credentials included (`credentials: 'include'` for fetch, `withCredentials: true` for axios) or the session cookie is dropped.
+
+### Pre-commit check
+
+```bash
+make lint && make test
+```
+
 ## Security checklist
 
 - [ ] Passwords hashed with argon2id

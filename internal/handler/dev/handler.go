@@ -8,16 +8,18 @@ import (
 
 	"github.com/Jarimnark/sugar-cane-service/internal/domain"
 	devsvc "github.com/Jarimnark/sugar-cane-service/internal/service/dev"
+	"github.com/Jarimnark/sugar-cane-service/internal/storage"
 )
 
 var validate = validator.New()
 
 type Handler struct {
-	svc devsvc.Service
+	svc     devsvc.Service
+	storage *storage.Client
 }
 
-func New(svc devsvc.Service) *Handler {
-	return &Handler{svc: svc}
+func New(svc devsvc.Service, storage *storage.Client) *Handler {
+	return &Handler{svc: svc, storage: storage}
 }
 
 func decode[T any](r *http.Request) (T, error) {

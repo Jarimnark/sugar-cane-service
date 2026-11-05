@@ -15,6 +15,28 @@ import (
 	gamedto "github.com/Jarimnark/sugar-cane-service/pkg/dto/game"
 )
 
+type stubUserRepo struct{}
+
+func newStubUserRepo() *stubUserRepo { return &stubUserRepo{} }
+
+func (s *stubUserRepo) Create(context.Context, sqlcgen.CreateUserParams) (sqlcgen.User, error) {
+	return sqlcgen.User{}, nil
+}
+func (s *stubUserRepo) GetByID(_ context.Context, id pgtype.UUID) (sqlcgen.User, error) {
+	return sqlcgen.User{ID: id, DisplayName: "Dev Studio"}, nil
+}
+func (s *stubUserRepo) GetByEmail(context.Context, string) (sqlcgen.User, error) {
+	return sqlcgen.User{}, nil
+}
+func (s *stubUserRepo) UpdateProfile(context.Context, sqlcgen.UpdateUserProfileParams) (sqlcgen.User, error) {
+	return sqlcgen.User{}, nil
+}
+func (s *stubUserRepo) UpdatePhoto(context.Context, sqlcgen.UpdateUserPhotoParams) (sqlcgen.User, error) {
+	return sqlcgen.User{}, nil
+}
+func (s *stubUserRepo) VerifyEmail(context.Context, pgtype.UUID) error { return nil }
+func (s *stubUserRepo) SoftDelete(context.Context, pgtype.UUID) error  { return nil }
+
 // --- mock game repository ---
 
 type mockGameRepo struct {
@@ -28,6 +50,10 @@ type mockGameRepo struct {
 	deleteFn           func(ctx context.Context, params sqlcgen.DeleteGameParams) error
 	getRelatedFn       func(ctx context.Context, excludeID pgtype.UUID, tags []string) ([]sqlcgen.Game, error)
 	incrementVisitFn   func(ctx context.Context, id pgtype.UUID) error
+	upsertGenresFn     func(ctx context.Context, gameID pgtype.UUID, genreIDs []pgtype.UUID) error
+	upsertPlatformsFn  func(ctx context.Context, gameID pgtype.UUID, platformIDs []pgtype.UUID) error
+	getGenresFn        func(ctx context.Context, gameID pgtype.UUID) ([]sqlcgen.GetGameGenresRow, error)
+	getPlatformsFn     func(ctx context.Context, gameID pgtype.UUID) ([]sqlcgen.GetGamePlatformsRow, error)
 }
 
 func (m *mockGameRepo) Create(ctx context.Context, params sqlcgen.CreateGameParams) (sqlcgen.Game, error) {
@@ -70,6 +96,34 @@ func (m *mockGameRepo) IncrementVisitCount(ctx context.Context, id pgtype.UUID) 
 	return m.incrementVisitFn(ctx, id)
 }
 
+func (m *mockGameRepo) UpsertGenres(ctx context.Context, gameID pgtype.UUID, genreIDs []pgtype.UUID) error {
+	if m.upsertGenresFn != nil {
+		return m.upsertGenresFn(ctx, gameID, genreIDs)
+	}
+	return nil
+}
+
+func (m *mockGameRepo) UpsertPlatforms(ctx context.Context, gameID pgtype.UUID, platformIDs []pgtype.UUID) error {
+	if m.upsertPlatformsFn != nil {
+		return m.upsertPlatformsFn(ctx, gameID, platformIDs)
+	}
+	return nil
+}
+
+func (m *mockGameRepo) GetGenres(ctx context.Context, gameID pgtype.UUID) ([]sqlcgen.GetGameGenresRow, error) {
+	if m.getGenresFn != nil {
+		return m.getGenresFn(ctx, gameID)
+	}
+	return nil, nil
+}
+
+func (m *mockGameRepo) GetPlatforms(ctx context.Context, gameID pgtype.UUID) ([]sqlcgen.GetGamePlatformsRow, error) {
+	if m.getPlatformsFn != nil {
+		return m.getPlatformsFn(ctx, gameID)
+	}
+	return nil, nil
+}
+
 // --- helpers ---
 
 var (
@@ -83,11 +137,11 @@ func makeGame(status string) sqlcgen.Game {
 		OwnerID: ownerID,
 		Slug:    "my-game",
 		Name:    "My Game",
-		Dev:     "Dev Studio",
+		Dev:     pgtype.Text{String: "Dev Studio", Valid: true},
 		Pitch:   "A short pitch for the game.",
 		Description: []byte("A longer description of the game."),
-		Bg:      "#ffffff",
-		Players: "1-4",
+		Bg:      pgtype.Text{String: "#ffffff", Valid: true},
+		Players: pgtype.Text{String: "single-player", Valid: true},
 		Tags:    []string{"action", "rpg"},
 		Status:  status,
 		CreatedAt: pgtype.Timestamptz{Time: time.Now(), Valid: true},
@@ -103,7 +157,7 @@ func TestListMyGames_ReturnsGames(t *testing.T) {
 			return []sqlcgen.Game{makeGame("draft"), makeGame("published")}, nil
 		},
 	}
-	svc := devsvc.New(repo)
+	svc := devsvc.New(repo, newStubUserRepo())
 
 	result, err := svc.ListMyGames(context.Background(), ownerID)
 	require.NoError(t, err)
@@ -117,7 +171,7 @@ func TestListMyGames_ReturnsEmptySliceWhenNone(t *testing.T) {
 			return nil, nil
 		},
 	}
-	svc := devsvc.New(repo)
+	svc := devsvc.New(repo, newStubUserRepo())
 
 	result, err := svc.ListMyGames(context.Background(), ownerID)
 	require.NoError(t, err)
@@ -131,7 +185,7 @@ func TestListMyGames_PropagatesRepoError(t *testing.T) {
 			return nil, wantErr
 		},
 	}
-	svc := devsvc.New(repo)
+	svc := devsvc.New(repo, newStubUserRepo())
 
 	_, err := svc.ListMyGames(context.Background(), ownerID)
 	require.Error(t, err)
@@ -150,7 +204,7 @@ func TestCreateOrUpdateGame_Create_Success(t *testing.T) {
 			return createdGame, nil
 		},
 	}
-	svc := devsvc.New(repo)
+	svc := devsvc.New(repo, newStubUserRepo())
 
 	req := gamedto.CreateOrUpdateGameRequest{
 		Slug:        "my-game",
@@ -181,7 +235,7 @@ func TestCreateOrUpdateGame_Create_ThenPublish(t *testing.T) {
 			return publishedGame, nil
 		},
 	}
-	svc := devsvc.New(repo)
+	svc := devsvc.New(repo, newStubUserRepo())
 
 	req := gamedto.CreateOrUpdateGameRequest{
 		Slug:        "my-game",
@@ -191,6 +245,11 @@ func TestCreateOrUpdateGame_Create_ThenPublish(t *testing.T) {
 		Description: "A longer description of the game.",
 		Bg:          "#ffffff",
 		Players:     "1-4",
+		Banner:      "https://example.com/banner.jpg",
+		PlayStyle:   "co-op",
+		LinkWeb:     "https://example.com/play",
+		GenreIDs:    []string{"11111111-1111-1111-1111-111111111111"},
+		PlatformIDs: []string{"22222222-2222-2222-2222-222222222222"},
 	}
 	resp, err := svc.CreateOrUpdateGame(context.Background(), ownerID, req, true)
 	require.NoError(t, err)
@@ -204,9 +263,10 @@ func TestCreateOrUpdateGame_Create_PropagatesRepoError(t *testing.T) {
 			return sqlcgen.Game{}, wantErr
 		},
 	}
-	svc := devsvc.New(repo)
+	svc := devsvc.New(repo, newStubUserRepo())
 
 	req := gamedto.CreateOrUpdateGameRequest{
+		Slug:        "my-game",
 		Name:        "My Game",
 		Dev:         "Dev Studio",
 		Pitch:       "A short pitch for the game.",
@@ -231,7 +291,7 @@ func TestCreateOrUpdateGame_Update_Success(t *testing.T) {
 			return updatedGame, nil
 		},
 	}
-	svc := devsvc.New(repo)
+	svc := devsvc.New(repo, newStubUserRepo())
 
 	req := gamedto.CreateOrUpdateGameRequest{
 		ID:          gameID.String(),
@@ -249,7 +309,7 @@ func TestCreateOrUpdateGame_Update_Success(t *testing.T) {
 
 func TestCreateOrUpdateGame_Update_InvalidID(t *testing.T) {
 	repo := &mockGameRepo{}
-	svc := devsvc.New(repo)
+	svc := devsvc.New(repo, newStubUserRepo())
 
 	req := gamedto.CreateOrUpdateGameRequest{
 		ID:          "not-a-uuid",
@@ -276,7 +336,7 @@ func TestCreateOrUpdateGame_AlreadyPublished_SkipsPublish(t *testing.T) {
 			return alreadyPublished, nil
 		},
 	}
-	svc := devsvc.New(repo)
+	svc := devsvc.New(repo, newStubUserRepo())
 
 	req := gamedto.CreateOrUpdateGameRequest{
 		ID:          gameID.String(),
@@ -286,6 +346,11 @@ func TestCreateOrUpdateGame_AlreadyPublished_SkipsPublish(t *testing.T) {
 		Description: "A longer description of the game.",
 		Bg:          "#ffffff",
 		Players:     "1-4",
+		Banner:      "https://example.com/banner.jpg",
+		PlayStyle:   "co-op",
+		LinkWeb:     "https://example.com/play",
+		GenreIDs:    []string{"11111111-1111-1111-1111-111111111111"},
+		PlatformIDs: []string{"22222222-2222-2222-2222-222222222222"},
 	}
 	// publish=true but game is already published — Publish should not be called
 	resp, err := svc.CreateOrUpdateGame(context.Background(), ownerID, req, true)
@@ -304,7 +369,7 @@ func TestGetMyGame_Success(t *testing.T) {
 			return game, nil
 		},
 	}
-	svc := devsvc.New(repo)
+	svc := devsvc.New(repo, newStubUserRepo())
 
 	resp, err := svc.GetMyGame(context.Background(), ownerID, gameID.String())
 	require.NoError(t, err)
@@ -313,7 +378,7 @@ func TestGetMyGame_Success(t *testing.T) {
 
 func TestGetMyGame_InvalidID(t *testing.T) {
 	repo := &mockGameRepo{}
-	svc := devsvc.New(repo)
+	svc := devsvc.New(repo, newStubUserRepo())
 
 	_, err := svc.GetMyGame(context.Background(), ownerID, "not-a-uuid")
 	require.Error(t, err)
@@ -327,7 +392,7 @@ func TestGetMyGame_ForbiddenWhenNotOwner(t *testing.T) {
 			return game, nil
 		},
 	}
-	svc := devsvc.New(repo)
+	svc := devsvc.New(repo, newStubUserRepo())
 
 	_, err := svc.GetMyGame(context.Background(), otherOwner, gameID.String())
 	require.Error(t, err)
@@ -341,7 +406,7 @@ func TestGetMyGame_PropagatesRepoError(t *testing.T) {
 			return sqlcgen.Game{}, wantErr
 		},
 	}
-	svc := devsvc.New(repo)
+	svc := devsvc.New(repo, newStubUserRepo())
 
 	_, err := svc.GetMyGame(context.Background(), ownerID, gameID.String())
 	require.Error(t, err)
@@ -358,7 +423,7 @@ func TestDeleteMyGame_Success(t *testing.T) {
 			return nil
 		},
 	}
-	svc := devsvc.New(repo)
+	svc := devsvc.New(repo, newStubUserRepo())
 
 	err := svc.DeleteMyGame(context.Background(), ownerID, gameID.String())
 	require.NoError(t, err)
@@ -366,7 +431,7 @@ func TestDeleteMyGame_Success(t *testing.T) {
 
 func TestDeleteMyGame_InvalidID(t *testing.T) {
 	repo := &mockGameRepo{}
-	svc := devsvc.New(repo)
+	svc := devsvc.New(repo, newStubUserRepo())
 
 	err := svc.DeleteMyGame(context.Background(), ownerID, "bad-uuid")
 	require.Error(t, err)
@@ -379,7 +444,7 @@ func TestDeleteMyGame_PropagatesRepoError(t *testing.T) {
 			return wantErr
 		},
 	}
-	svc := devsvc.New(repo)
+	svc := devsvc.New(repo, newStubUserRepo())
 
 	err := svc.DeleteMyGame(context.Background(), ownerID, gameID.String())
 	require.ErrorIs(t, err, wantErr)

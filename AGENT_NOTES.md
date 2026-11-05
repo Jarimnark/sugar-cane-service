@@ -198,3 +198,51 @@ The `?action=` query param has been removed; action is inferred from the presenc
 - `internal/handler/dev/routes.go` — updated `CreateOrUpdateGame` handler (uses new DTO, drops `action` param, 200 response)
 - `internal/service/dev/dev_test.go` — 16 unit tests, all passing
 - `cmd/api/main.go` — minimal fix: `devsvc.New()` → `devsvc.New(games)`
+
+---
+
+# Comment Agent Notes
+
+## commentsvc.New() signature
+```go
+commentsvc.New(comments commentrepo.Repository, pool *pgxpool.Pool) commentsvc.Service
+```
+
+## Imports needed in main.go
+```go
+commenthandler "github.com/Jarimnark/sugar-cane-service/internal/handler/comment"
+commentrepo    "github.com/Jarimnark/sugar-cane-service/internal/repository/comment"
+commentsvc     "github.com/Jarimnark/sugar-cane-service/internal/service/comment"
+```
+
+## Wiring in main.go
+```go
+comments := commentrepo.New(q)
+commentService := commentsvc.New(comments, pool)
+// pass commenthandler.New(commentService) to handler.NewRouter(..., sessions)
+```
+
+`handler.NewRouter` now takes an extra `*commenthandler.Handler` positional arg (added after `*devhandler.Handler`, before `sessionrepo.Repository`).
+
+## New migrations
+- `00013_add_game_comments_anonymous_and_likes.sql` — adds `anonymous BOOL DEFAULT FALSE` and `like_count INT DEFAULT 0` to `game_comments`.
+- `00014_create_comment_likes.sql` — new table `comment_likes (user_id, comment_id, created_at, PRIMARY KEY (user_id, comment_id))` with FK cascades + `GRANT SELECT, INSERT, DELETE ON comment_likes TO app`.
+
+Run `make migrate-up` before starting the server (requires `DATABASE_URL`).
+
+## New middleware
+`internal/middleware/auth.go` now exports `OptionalAuth(sessions)` in addition to `Auth(sessions)`. OptionalAuth attaches the session to the context when the cookie is valid but never 401s. The public `GET /game/:id/comments` route is mounted under OptionalAuth so `liked` and `is_own` are personalised when a cookie is present. Keep using plain `Auth` for writes.
+
+## New sqlc query files
+- `db/queries/game_comments.sql` — `GameExists`, `CountCommentsForGame`, `ListCommentsForGameNewest`, `ListCommentsForGameTop`, `GetCommentByID`, `GetCommentWithAuthor`, `InsertComment`, `DeleteComment` (DELETE WHERE id=$1 AND user_id=$2 — service also checks author before issuing so we can return a clean 403).
+- `db/queries/comment_likes.sql` — mirrors `game_likes.sql`: `InsertCommentLike`, `DeleteCommentLike`, `IncrementCommentLikeCount`, `DecrementCommentLikeCount`.
+
+The list queries LEFT JOIN `comment_likes` on `$2::uuid` (viewer) so the `liked` column is `false` when the viewer is unauth (viewer UUID is NIL). The author JOIN also returns `g.owner_id` so the service can compute `is_developer` without a second roundtrip. For sqlc-generated params, the viewer/limit/offset are positional (`Column2`, `Column3`, `Column4`) because we use `::uuid` / `::int` casts.
+
+## Anonymity rules (service layer)
+- Anonymous comments: `user_id=""`, `author_name="Anonymous"`, `author_photo_url=""`, `is_developer=false`.
+- `is_own` is still computed server-side even when anonymous — the signed-in author sees `is_own=true` so they can delete.
+- `is_developer = (comment.user_id == game.owner_id AND NOT anonymous)` — computed in `mapper.go`.
+
+## Tests
+`internal/service/comment/comment_test.go` — 17 unit tests covering List (sort/validation/anonymity/badge/liked), Create (validation/anonymity/mapping), Delete (not-found/not-author/success), and Like/Unlike invalid-UUID paths. Like/Unlike happy paths need a real pool and are covered by the live curl smoke test.

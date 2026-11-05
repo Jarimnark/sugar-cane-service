@@ -23,8 +23,11 @@ Status values: `todo` · `inprogress` · `done` · `fix`
 |--------|------|--------|-------|
 | POST | /me/profile | done | Delegates to UpdateMe (idempotent upsert) |
 | PATCH | /me | done | Updates display name / bio |
+| GET | /me/connections | done | Lists link state for every supported OAuth provider |
 | POST | /me/connection/:provider | done | Stub — returns BadRequest (use /auth/:provider/start) |
 | DELETE | /me/connection/:provider | done | Unlinks OAuth provider |
+| GET | /me/sessions | done | Count + list of active sessions; marks the current one |
+| DELETE | /me/sessions | done | Revokes all sessions except the one making the request |
 | DELETE | /me | done | Soft-delete: deleted_at stamp + session purge (migration 00012) |
 
 ---
@@ -36,8 +39,8 @@ Status values: `todo` · `inprogress` · `done` · `fix`
 | GET | /home | done | trending (5 by visit_count), popular (6 by like_count), new (5 by created_at) |
 | GET | /master-option | done | Genres + Platforms dropdown options |
 | GET | /category-detail | done | Game counts by genre and platform |
-| POST | /game/list | done | Filtered by genreID/platformID, sorted by popular/new, paginated |
-| GET | /game/suggest | done | ILIKE search on name, returns top 10 by like_count |
+| POST | /game/list | done | Filtered by genre_id/platform_id/q (ILIKE name); sort ∈ {popular (visit_count), most_liked (like_count), newest (default: created_at)}; paginated |
+| GET | /game/suggest | done | ILIKE search on name; returns [] when q is blank; top 10 by like_count |
 | GET | /game/:id | done | Game detail; increments visit_count |
 | GET | /game/:id/related | done | Related by tags overlap, excludes self |
 | POST | /game/:id/event | done | Records visit event (increments visit_count) |
@@ -64,3 +67,15 @@ Status values: `todo` · `inprogress` · `done` · `fix`
 | POST | /me/game | done | id="" → create; id=UUID → update; ?publish=true publishes |
 | GET | /me/game/:id | done | Owner-only view; 403 if not owner |
 | DELETE | /me/game/:id | done | Owner-enforced by WHERE owner_id=$2 in SQL |
+
+---
+
+## Comments
+
+| Method | Path | Status | Notes |
+|--------|------|--------|-------|
+| GET | /game/:id/comments | done | Public (OptionalAuth so `liked`/`is_own` are personalized when cookie present); `sort=newest\|top`, `page`, `limit` (default 20, max 100); envelope `{count, items}` |
+| POST | /game/:id/comments | done | Authed; body `{content, anonymous}`; content 1–500 chars; 201 + `CommentResponse`; 404 if game missing |
+| DELETE | /comment/:id | done | Authed, author-only (403 if not author); 204 |
+| PUT | /comment/:id/like | done | Authed; atomic INSERT comment_like + like_count++ in tx; 204 |
+| DELETE | /comment/:id/like | done | Authed; atomic DELETE comment_like + GREATEST(like_count-1,0) in tx; 204 |

@@ -40,3 +40,25 @@ type LoginOutput struct {
 	ExpiresAt time.Time
 	User      *UserResponse
 }
+
+type SessionListItem struct {
+	ID         string    `json:"id"`
+	UserAgent  string    `json:"user_agent,omitempty"`
+	IPAddress  string    `json:"ip_address,omitempty"`
+	CreatedAt  time.Time `json:"created_at"`
+	LastUsedAt time.Time `json:"last_used_at"`
+	ExpiresAt  time.Time `json:"expires_at"`
+	IsCurrent  bool      `json:"is_current"`
+}
+
+type SessionListResponse struct {
+	Count            int               `json:"count"`
+	CurrentSessionID string            `json:"current_session_id"`
+	Sessions         []SessionListItem `json:"sessions"`
+}
+
+type ConnectionListItem struct {
+	Provider string     `json:"provider"`
+	Linked   bool       `json:"linked"`
+	LinkedAt *time.Time `json:"linked_at,omitempty"`
+}

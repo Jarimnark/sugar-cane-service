@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/Jarimnark/sugar-cane-service/internal/domain"
@@ -62,6 +63,22 @@ func (m *mockGameRepo) IncrementVisitCount(ctx context.Context, id pgtype.UUID) 
 	return nil
 }
 
+func (m *mockGameRepo) UpsertGenres(_ context.Context, _ pgtype.UUID, _ []pgtype.UUID) error {
+	return nil
+}
+
+func (m *mockGameRepo) UpsertPlatforms(_ context.Context, _ pgtype.UUID, _ []pgtype.UUID) error {
+	return nil
+}
+
+func (m *mockGameRepo) GetGenres(_ context.Context, _ pgtype.UUID) ([]sqlcgen.GetGameGenresRow, error) {
+	return nil, nil
+}
+
+func (m *mockGameRepo) GetPlatforms(_ context.Context, _ pgtype.UUID) ([]sqlcgen.GetGamePlatformsRow, error) {
+	return nil, nil
+}
+
 // --- mock sessionrepo ---
 
 type mockSessionRepo struct{}
@@ -75,6 +92,12 @@ func (m *mockSessionRepo) Get(_ context.Context, _ string) (sqlcgen.Session, err
 func (m *mockSessionRepo) Touch(_ context.Context, _ string) error { return nil }
 func (m *mockSessionRepo) Delete(_ context.Context, _ string) error { return nil }
 func (m *mockSessionRepo) DeleteAllForUser(_ context.Context, _ pgtype.UUID) error { return nil }
+func (m *mockSessionRepo) ListForUser(_ context.Context, _ pgtype.UUID) ([]sqlcgen.Session, error) {
+	return nil, nil
+}
+func (m *mockSessionRepo) DeleteAllForUserExcept(_ context.Context, _ pgtype.UUID, _ string) error {
+	return nil
+}
 
 // helper to build a published game with a known UUID
 func publishedGame(id string, tags []string) sqlcgen.Game {
@@ -84,10 +107,10 @@ func publishedGame(id string, tags []string) sqlcgen.Game {
 		ID:        uid,
 		Slug:      "test-game",
 		Name:      "Test Game",
-		Dev:       "Dev Co",
+		Dev:       pgtype.Text{String: "Dev Co", Valid: true},
 		Pitch:     "A test game",
-		Bg:        "#ff0000",
-		Players:   "1",
+		Bg:        pgtype.Text{String: "#ff0000", Valid: true},
+		Players:   pgtype.Text{String: "single-player", Valid: true},
 		Tags:      tags,
 		Status:    "published",
 		LikeCount: 10,
@@ -122,7 +145,7 @@ func TestGetGame_Published(t *testing.T) {
 func TestGetGame_NotFound(t *testing.T) {
 	repo := &mockGameRepo{
 		getByIDFunc: func(_ context.Context, _ pgtype.UUID) (sqlcgen.Game, error) {
-			return sqlcgen.Game{}, errors.New("no rows")
+			return sqlcgen.Game{}, pgx.ErrNoRows
 		},
 	}
 	svc := gamesvc.New(repo, &mockSessionRepo{}, nil)

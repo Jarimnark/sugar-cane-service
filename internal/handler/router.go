@@ -5,6 +5,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	authhandler "github.com/Jarimnark/sugar-cane-service/internal/handler/auth"
+	commenthandler "github.com/Jarimnark/sugar-cane-service/internal/handler/comment"
 	devhandler "github.com/Jarimnark/sugar-cane-service/internal/handler/dev"
 	gamehandler "github.com/Jarimnark/sugar-cane-service/internal/handler/game"
 	listhandler "github.com/Jarimnark/sugar-cane-service/internal/handler/list"
@@ -19,6 +20,7 @@ func NewRouter(
 	games *gamehandler.Handler,
 	list *listhandler.Handler,
 	dev *devhandler.Handler,
+	comments *commenthandler.Handler,
 	sessions sessionrepo.Repository,
 ) chi.Router {
 	r := chi.NewRouter()
@@ -32,6 +34,12 @@ func NewRouter(
 	r.Route("/api/v1", func(r chi.Router) {
 		auth.MountPublic(r)
 		games.MountPublic(r)
+
+		r.Group(func(r chi.Router) {
+			r.Use(appmw.OptionalAuth(sessions))
+			comments.MountPublic(r)
+			comments.MountAuthed(r)
+		})
 
 		r.Group(func(r chi.Router) {
 			r.Use(appmw.Auth(sessions))

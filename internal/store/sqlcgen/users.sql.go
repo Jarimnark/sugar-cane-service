@@ -85,11 +85,41 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
 	return i, err
 }
 
+const updateUserPhoto = `-- name: UpdateUserPhoto :one
+UPDATE users
+SET photo_url  = $2,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, email, password_hash, display_name, bio, photo_url, email_verified, created_at, updated_at, deleted_at
+`
+
+type UpdateUserPhotoParams struct {
+	ID       pgtype.UUID `json:"id"`
+	PhotoUrl pgtype.Text `json:"photo_url"`
+}
+
+func (q *Queries) UpdateUserPhoto(ctx context.Context, arg UpdateUserPhotoParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserPhoto, arg.ID, arg.PhotoUrl)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.DisplayName,
+		&i.Bio,
+		&i.PhotoUrl,
+		&i.EmailVerified,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+	)
+	return i, err
+}
+
 const updateUserProfile = `-- name: UpdateUserProfile :one
 UPDATE users
 SET display_name = $2,
     bio          = $3,
-    photo_url    = $4,
     updated_at   = NOW()
 WHERE id = $1
 RETURNING id, email, password_hash, display_name, bio, photo_url, email_verified, created_at, updated_at, deleted_at
@@ -99,16 +129,10 @@ type UpdateUserProfileParams struct {
 	ID          pgtype.UUID `json:"id"`
 	DisplayName string      `json:"display_name"`
 	Bio         pgtype.Text `json:"bio"`
-	PhotoUrl    pgtype.Text `json:"photo_url"`
 }
 
 func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error) {
-	row := q.db.QueryRow(ctx, updateUserProfile,
-		arg.ID,
-		arg.DisplayName,
-		arg.Bio,
-		arg.PhotoUrl,
-	)
+	row := q.db.QueryRow(ctx, updateUserProfile, arg.ID, arg.DisplayName, arg.Bio)
 	var i User
 	err := row.Scan(
 		&i.ID,

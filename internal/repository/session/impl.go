@@ -43,3 +43,14 @@ func (r *repo) Delete(ctx context.Context, id string) error {
 func (r *repo) DeleteAllForUser(ctx context.Context, userID pgtype.UUID) error {
 	return r.queries(ctx).DeleteUserSessions(ctx, userID)
 }
+
+func (r *repo) ListForUser(ctx context.Context, userID pgtype.UUID) ([]sqlcgen.Session, error) {
+	return r.queries(ctx).ListUserSessions(ctx, userID)
+}
+
+func (r *repo) DeleteAllForUserExcept(ctx context.Context, userID pgtype.UUID, keepID string) error {
+	return r.queries(ctx).DeleteUserSessionsExcept(ctx, sqlcgen.DeleteUserSessionsExceptParams{
+		UserID: userID,
+		ID:     keepID,
+	})
+}

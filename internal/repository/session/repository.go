@@ -14,4 +14,6 @@ type Repository interface {
 	Touch(ctx context.Context, id string) error
 	Delete(ctx context.Context, id string) error
 	DeleteAllForUser(ctx context.Context, userID pgtype.UUID) error
+	ListForUser(ctx context.Context, userID pgtype.UUID) ([]sqlcgen.Session, error)
+	DeleteAllForUserExcept(ctx context.Context, userID pgtype.UUID, keepID string) error
 }

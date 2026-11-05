@@ -12,7 +12,7 @@ import (
 )
 
 const getHomeNew = `-- name: GetHomeNew :many
-SELECT id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at FROM games WHERE status = 'published' ORDER BY created_at DESC LIMIT 5
+SELECT id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at, video_links, screenshots, banner_url, play_style FROM games WHERE status = 'published' ORDER BY created_at DESC LIMIT 5
 `
 
 func (q *Queries) GetHomeNew(ctx context.Context) ([]Game, error) {
@@ -45,6 +45,10 @@ func (q *Queries) GetHomeNew(ctx context.Context) ([]Game, error) {
 			&i.Badge,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.VideoLinks,
+			&i.Screenshots,
+			&i.BannerUrl,
+			&i.PlayStyle,
 		); err != nil {
 			return nil, err
 		}
@@ -57,7 +61,7 @@ func (q *Queries) GetHomeNew(ctx context.Context) ([]Game, error) {
 }
 
 const getHomePopular = `-- name: GetHomePopular :many
-SELECT id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at FROM games WHERE status = 'published' ORDER BY like_count DESC LIMIT 6
+SELECT id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at, video_links, screenshots, banner_url, play_style FROM games WHERE status = 'published' ORDER BY like_count DESC LIMIT 6
 `
 
 func (q *Queries) GetHomePopular(ctx context.Context) ([]Game, error) {
@@ -90,6 +94,10 @@ func (q *Queries) GetHomePopular(ctx context.Context) ([]Game, error) {
 			&i.Badge,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.VideoLinks,
+			&i.Screenshots,
+			&i.BannerUrl,
+			&i.PlayStyle,
 		); err != nil {
 			return nil, err
 		}
@@ -102,7 +110,7 @@ func (q *Queries) GetHomePopular(ctx context.Context) ([]Game, error) {
 }
 
 const getHomeTrending = `-- name: GetHomeTrending :many
-SELECT id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at FROM games WHERE status = 'published' ORDER BY visit_count DESC LIMIT 5
+SELECT id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at, video_links, screenshots, banner_url, play_style FROM games WHERE status = 'published' ORDER BY visit_count DESC LIMIT 5
 `
 
 func (q *Queries) GetHomeTrending(ctx context.Context) ([]Game, error) {
@@ -135,6 +143,10 @@ func (q *Queries) GetHomeTrending(ctx context.Context) ([]Game, error) {
 			&i.Badge,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.VideoLinks,
+			&i.Screenshots,
+			&i.BannerUrl,
+			&i.PlayStyle,
 		); err != nil {
 			return nil, err
 		}
@@ -147,7 +159,7 @@ func (q *Queries) GetHomeTrending(ctx context.Context) ([]Game, error) {
 }
 
 const getRelatedGames = `-- name: GetRelatedGames :many
-SELECT id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at FROM games
+SELECT id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at, video_links, screenshots, banner_url, play_style FROM games
 WHERE status = 'published' AND id != $1::uuid AND tags && $2::text[]
 ORDER BY like_count DESC LIMIT 6
 `
@@ -187,6 +199,10 @@ func (q *Queries) GetRelatedGames(ctx context.Context, arg GetRelatedGamesParams
 			&i.Badge,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.VideoLinks,
+			&i.Screenshots,
+			&i.BannerUrl,
+			&i.PlayStyle,
 		); err != nil {
 			return nil, err
 		}
@@ -208,15 +224,19 @@ func (q *Queries) IncrementVisitCount(ctx context.Context, id pgtype.UUID) error
 }
 
 const listGamesFiltered = `-- name: ListGamesFiltered :many
-SELECT DISTINCT g.id, g.owner_id, g.slug, g.name, g.link_web, g.link_android, g.link_ios, g.domain, g.dev, g.pitch, g.description, g.bg, g.players, g.tags, g.status, g.like_count, g.visit_count, g.badge, g.created_at, g.updated_at FROM games g
-LEFT JOIN game_genres gg ON gg.game_id = g.id
-LEFT JOIN game_platforms gp ON gp.game_id = g.id
+SELECT g.id, g.owner_id, g.slug, g.name, g.link_web, g.link_android, g.link_ios, g.domain, g.dev, g.pitch, g.description, g.bg, g.players, g.tags, g.status, g.like_count, g.visit_count, g.badge, g.created_at, g.updated_at, g.video_links, g.screenshots, g.banner_url, g.play_style FROM games g
 WHERE g.status = 'published'
-  AND ($1::uuid IS NULL OR gg.genre_id = $1::uuid)
-  AND ($2::uuid IS NULL OR gp.platform_id = $2::uuid)
+  AND ($1::uuid IS NULL OR EXISTS (
+    SELECT 1 FROM game_genres gg WHERE gg.game_id = g.id AND gg.genre_id = $1::uuid
+  ))
+  AND ($2::uuid IS NULL OR EXISTS (
+    SELECT 1 FROM game_platforms gp WHERE gp.game_id = g.id AND gp.platform_id = $2::uuid
+  ))
+  AND ($6::text = '' OR g.name ILIKE '%' || $6::text || '%')
 ORDER BY
-  CASE WHEN $3::text = 'popular' THEN g.like_count END DESC,
-  CASE WHEN $3::text != 'popular' THEN g.created_at END DESC
+  CASE WHEN $3::text = 'popular'    THEN g.visit_count END DESC NULLS LAST,
+  CASE WHEN $3::text = 'most_liked' THEN g.like_count  END DESC NULLS LAST,
+  CASE WHEN $3::text NOT IN ('popular','most_liked') THEN g.created_at END DESC NULLS LAST
 LIMIT $4::int OFFSET $5::int
 `
 
@@ -226,6 +246,7 @@ type ListGamesFilteredParams struct {
 	Column3 string      `json:"column_3"`
 	Column4 int32       `json:"column_4"`
 	Column5 int32       `json:"column_5"`
+	Column6 string      `json:"column_6"`
 }
 
 func (q *Queries) ListGamesFiltered(ctx context.Context, arg ListGamesFilteredParams) ([]Game, error) {
@@ -235,6 +256,7 @@ func (q *Queries) ListGamesFiltered(ctx context.Context, arg ListGamesFilteredPa
 		arg.Column3,
 		arg.Column4,
 		arg.Column5,
+		arg.Column6,
 	)
 	if err != nil {
 		return nil, err
@@ -264,6 +286,10 @@ func (q *Queries) ListGamesFiltered(ctx context.Context, arg ListGamesFilteredPa
 			&i.Badge,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.VideoLinks,
+			&i.Screenshots,
+			&i.BannerUrl,
+			&i.PlayStyle,
 		); err != nil {
 			return nil, err
 		}
@@ -277,7 +303,9 @@ func (q *Queries) ListGamesFiltered(ctx context.Context, arg ListGamesFilteredPa
 
 const suggestGames = `-- name: SuggestGames :many
 SELECT id, slug, name, dev, bg FROM games
-WHERE status = 'published' AND name ILIKE '%' || $1::text || '%'
+WHERE status = 'published'
+  AND $1::text <> ''
+  AND name ILIKE '%' || $1::text || '%'
 ORDER BY like_count DESC LIMIT 10
 `
 
@@ -285,8 +313,8 @@ type SuggestGamesRow struct {
 	ID   pgtype.UUID `json:"id"`
 	Slug string      `json:"slug"`
 	Name string      `json:"name"`
-	Dev  string      `json:"dev"`
-	Bg   string      `json:"bg"`
+	Dev  pgtype.Text `json:"dev"`
+	Bg   pgtype.Text `json:"bg"`
 }
 
 func (q *Queries) SuggestGames(ctx context.Context, dollar_1 string) ([]SuggestGamesRow, error) {

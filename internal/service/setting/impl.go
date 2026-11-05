@@ -38,7 +38,6 @@ func (s *svc) UpdateMe(ctx context.Context, userID pgtype.UUID, req userdto.Upda
 		ID:          userID,
 		DisplayName: req.DisplayName,
 		Bio:         pgtype.Text{String: req.Bio, Valid: req.Bio != ""},
-		PhotoUrl:    pgtype.Text{}, // photo_url is not changed via this endpoint
 	})
 	if err != nil {
 		return nil, fmt.Errorf("UpdateMe: %w", err)
@@ -94,4 +93,66 @@ func userToDTO(u sqlcgen.User) *userdto.UserResponse {
 		EmailVerified: u.EmailVerified,
 		CreatedAt:     u.CreatedAt.Time,
 	}
+}
+
+// supportedProviders is the fixed list of OAuth providers we expose on the
+// settings page. Keeps the "Not connected" rows deterministic even when the
+// user has no oauth_accounts row yet.
+var supportedProviders = []string{"google", "facebook"}
+
+func (s *svc) ListConnections(ctx context.Context, userID pgtype.UUID) ([]userdto.ConnectionListItem, error) {
+	accounts, err := s.oauths.ListByUser(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("ListConnections: %w", err)
+	}
+	linked := make(map[string]sqlcgen.OauthAccount, len(accounts))
+	for _, a := range accounts {
+		linked[a.Provider] = a
+	}
+	out := make([]userdto.ConnectionListItem, 0, len(supportedProviders))
+	for _, p := range supportedProviders {
+		item := userdto.ConnectionListItem{Provider: p}
+		if a, ok := linked[p]; ok {
+			item.Linked = true
+			t := a.CreatedAt.Time
+			item.LinkedAt = &t
+		}
+		out = append(out, item)
+	}
+	return out, nil
+}
+
+func (s *svc) ListSessions(ctx context.Context, userID pgtype.UUID, currentSessionID string) (*userdto.SessionListResponse, error) {
+	rows, err := s.sessions.ListForUser(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("ListSessions: %w", err)
+	}
+	items := make([]userdto.SessionListItem, 0, len(rows))
+	for _, r := range rows {
+		var ip string
+		if r.IpAddress != nil {
+			ip = r.IpAddress.String()
+		}
+		items = append(items, userdto.SessionListItem{
+			ID:         r.ID,
+			UserAgent:  r.UserAgent.String,
+			IPAddress:  ip,
+			CreatedAt:  r.CreatedAt.Time,
+			LastUsedAt: r.LastUsedAt.Time,
+			ExpiresAt:  r.ExpiresAt.Time,
+			IsCurrent:  r.ID == currentSessionID,
+		})
+	}
+	return &userdto.SessionListResponse{
+		Count:            len(items),
+		CurrentSessionID: currentSessionID,
+		Sessions:         items,
+	}, nil
+}
+
+func (s *svc) LogoutEverywhere(ctx context.Context, userID pgtype.UUID, currentSessionID string) error {
+	if err := s.sessions.DeleteAllForUserExcept(ctx, userID, currentSessionID); err != nil {
+		return fmt.Errorf("LogoutEverywhere: %w", err)
+	}
+	return nil
 }

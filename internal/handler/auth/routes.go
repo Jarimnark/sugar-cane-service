@@ -55,7 +55,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.SetCookie(w, &http.Cookie{Name: "oauth_state", Value: "", Path: "/", MaxAge: -1})
-	out, err := h.svc.OAuthCallback(r.Context(), provider, r.URL.Query().Get("code"), r.RemoteAddr, r.UserAgent())
+	out, err := h.svc.OAuthCallback(r.Context(), provider, r.URL.Query().Get("code"), httputil.ClientIP(r), r.UserAgent())
 	if err != nil {
 		httputil.RespondError(w, err)
 		return

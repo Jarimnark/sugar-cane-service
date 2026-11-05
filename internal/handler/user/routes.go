@@ -52,7 +52,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		httputil.RespondError(w, err)
 		return
 	}
-	out, err := h.svc.Login(r.Context(), req, r.RemoteAddr, r.UserAgent())
+	out, err := h.svc.Login(r.Context(), req, httputil.ClientIP(r), r.UserAgent())
 	if err != nil {
 		httputil.RespondError(w, err)
 		return
@@ -173,7 +173,7 @@ func (h *Handler) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	out, err := h.svc.LoginWithOAuth(r.Context(), provider, providerID, email, displayName, photoURL, r.RemoteAddr, r.UserAgent())
+	out, err := h.svc.LoginWithOAuth(r.Context(), provider, providerID, email, displayName, photoURL, httputil.ClientIP(r), r.UserAgent())
 	if err != nil {
 		httputil.RespondError(w, err)
 		return

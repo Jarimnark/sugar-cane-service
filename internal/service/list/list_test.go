@@ -72,10 +72,10 @@ func testGame() sqlcgen.Game {
 		OwnerID:   testUserID,
 		Slug:      "test-game",
 		Name:      "Test Game",
-		Dev:       "Test Dev",
+		Dev:       pgtype.Text{String: "Test Dev", Valid: true},
 		Pitch:     "A test pitch",
-		Bg:        "#ff0000",
-		Players:   "1-4",
+		Bg:        pgtype.Text{String: "#ff0000", Valid: true},
+		Players:   pgtype.Text{String: "single-player", Valid: true},
 		Tags:      []string{"action"},
 		Status:    "published",
 		LikeCount: 42,
@@ -101,7 +101,7 @@ func TestGetMyList_ReturnsMappedGames(t *testing.T) {
 	}
 	svc := newNoTxSvc(&mockLikeRepo{}, saved)
 
-	result, err := svc.GetMyList(context.Background(), testUserID, "")
+	result, err := svc.GetMyList(context.Background(), testUserID)
 	require.NoError(t, err)
 	require.Len(t, result, 1)
 	assert.Equal(t, game.Slug, result[0].Slug)
@@ -117,7 +117,7 @@ func TestGetMyList_EmptyList(t *testing.T) {
 	}
 	svc := newNoTxSvc(&mockLikeRepo{}, saved)
 
-	result, err := svc.GetMyList(context.Background(), testUserID, "")
+	result, err := svc.GetMyList(context.Background(), testUserID)
 	require.NoError(t, err)
 	assert.Empty(t, result)
 }
@@ -131,7 +131,7 @@ func TestGetMyList_PropagatesRepoError(t *testing.T) {
 	}
 	svc := newNoTxSvc(&mockLikeRepo{}, saved)
 
-	_, err := svc.GetMyList(context.Background(), testUserID, "")
+	_, err := svc.GetMyList(context.Background(), testUserID)
 	require.ErrorIs(t, err, wantErr)
 }
 
@@ -146,7 +146,7 @@ func TestGetMyList_DTOMapsFields(t *testing.T) {
 	}
 	svc := newNoTxSvc(&mockLikeRepo{}, saved)
 
-	result, err := svc.GetMyList(context.Background(), testUserID, "")
+	result, err := svc.GetMyList(context.Background(), testUserID)
 	require.NoError(t, err)
 	require.Len(t, result, 1)
 	assert.Equal(t, "https://example.com", result[0].LinkWeb)
@@ -245,7 +245,7 @@ func TestGetMyList_DTOIDFormat(t *testing.T) {
 	}
 	svc := newNoTxSvc(&mockLikeRepo{}, saved)
 
-	result, err := svc.GetMyList(context.Background(), testUserID, "")
+	result, err := svc.GetMyList(context.Background(), testUserID)
 	require.NoError(t, err)
 	require.Len(t, result, 1)
 

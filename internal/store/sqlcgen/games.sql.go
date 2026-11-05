@@ -12,21 +12,25 @@ import (
 )
 
 const createGame = `-- name: CreateGame :one
-INSERT INTO games (owner_id, slug, name, dev, pitch, description, bg, players, tags)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at
+INSERT INTO games (owner_id, slug, name, dev, pitch, description, bg, players, tags, video_links, screenshots, banner_url, play_style)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+RETURNING id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at, video_links, screenshots, banner_url, play_style
 `
 
 type CreateGameParams struct {
 	OwnerID     pgtype.UUID `json:"owner_id"`
 	Slug        string      `json:"slug"`
 	Name        string      `json:"name"`
-	Dev         string      `json:"dev"`
+	Dev         pgtype.Text `json:"dev"`
 	Pitch       string      `json:"pitch"`
 	Description []byte      `json:"description"`
-	Bg          string      `json:"bg"`
-	Players     string      `json:"players"`
+	Bg          pgtype.Text `json:"bg"`
+	Players     pgtype.Text `json:"players"`
 	Tags        []string    `json:"tags"`
+	VideoLinks  []string    `json:"video_links"`
+	Screenshots []string    `json:"screenshots"`
+	BannerUrl   pgtype.Text `json:"banner_url"`
+	PlayStyle   pgtype.Text `json:"play_style"`
 }
 
 func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, error) {
@@ -40,6 +44,10 @@ func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, e
 		arg.Bg,
 		arg.Players,
 		arg.Tags,
+		arg.VideoLinks,
+		arg.Screenshots,
+		arg.BannerUrl,
+		arg.PlayStyle,
 	)
 	var i Game
 	err := row.Scan(
@@ -63,6 +71,10 @@ func (q *Queries) CreateGame(ctx context.Context, arg CreateGameParams) (Game, e
 		&i.Badge,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.VideoLinks,
+		&i.Screenshots,
+		&i.BannerUrl,
+		&i.PlayStyle,
 	)
 	return i, err
 }
@@ -81,8 +93,26 @@ func (q *Queries) DeleteGame(ctx context.Context, arg DeleteGameParams) error {
 	return err
 }
 
+const deleteGameGenres = `-- name: DeleteGameGenres :exec
+DELETE FROM game_genres WHERE game_id = $1
+`
+
+func (q *Queries) DeleteGameGenres(ctx context.Context, gameID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteGameGenres, gameID)
+	return err
+}
+
+const deleteGamePlatforms = `-- name: DeleteGamePlatforms :exec
+DELETE FROM game_platforms WHERE game_id = $1
+`
+
+func (q *Queries) DeleteGamePlatforms(ctx context.Context, gameID pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, deleteGamePlatforms, gameID)
+	return err
+}
+
 const getGameByID = `-- name: GetGameByID :one
-SELECT id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at FROM games WHERE id = $1
+SELECT id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at, video_links, screenshots, banner_url, play_style FROM games WHERE id = $1
 `
 
 func (q *Queries) GetGameByID(ctx context.Context, id pgtype.UUID) (Game, error) {
@@ -109,12 +139,16 @@ func (q *Queries) GetGameByID(ctx context.Context, id pgtype.UUID) (Game, error)
 		&i.Badge,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.VideoLinks,
+		&i.Screenshots,
+		&i.BannerUrl,
+		&i.PlayStyle,
 	)
 	return i, err
 }
 
 const getGameBySlug = `-- name: GetGameBySlug :one
-SELECT id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at FROM games WHERE slug = $1
+SELECT id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at, video_links, screenshots, banner_url, play_style FROM games WHERE slug = $1
 `
 
 func (q *Queries) GetGameBySlug(ctx context.Context, slug string) (Game, error) {
@@ -141,12 +175,110 @@ func (q *Queries) GetGameBySlug(ctx context.Context, slug string) (Game, error) 
 		&i.Badge,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.VideoLinks,
+		&i.Screenshots,
+		&i.BannerUrl,
+		&i.PlayStyle,
 	)
 	return i, err
 }
 
+const getGameGenres = `-- name: GetGameGenres :many
+SELECT g.id, g.name, g.slug FROM genres g
+JOIN game_genres gg ON gg.genre_id = g.id
+WHERE gg.game_id = $1
+`
+
+type GetGameGenresRow struct {
+	ID   pgtype.UUID `json:"id"`
+	Name string      `json:"name"`
+	Slug string      `json:"slug"`
+}
+
+func (q *Queries) GetGameGenres(ctx context.Context, gameID pgtype.UUID) ([]GetGameGenresRow, error) {
+	rows, err := q.db.Query(ctx, getGameGenres, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetGameGenresRow
+	for rows.Next() {
+		var i GetGameGenresRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Slug); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getGamePlatforms = `-- name: GetGamePlatforms :many
+SELECT p.id, p.name, p.slug FROM platforms p
+JOIN game_platforms gp ON gp.platform_id = p.id
+WHERE gp.game_id = $1
+`
+
+type GetGamePlatformsRow struct {
+	ID   pgtype.UUID `json:"id"`
+	Name string      `json:"name"`
+	Slug string      `json:"slug"`
+}
+
+func (q *Queries) GetGamePlatforms(ctx context.Context, gameID pgtype.UUID) ([]GetGamePlatformsRow, error) {
+	rows, err := q.db.Query(ctx, getGamePlatforms, gameID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetGamePlatformsRow
+	for rows.Next() {
+		var i GetGamePlatformsRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Slug); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const insertGameGenres = `-- name: InsertGameGenres :exec
+INSERT INTO game_genres (game_id, genre_id)
+SELECT $1, unnest($2::uuid[])
+`
+
+type InsertGameGenresParams struct {
+	GameID  pgtype.UUID   `json:"game_id"`
+	Column2 []pgtype.UUID `json:"column_2"`
+}
+
+func (q *Queries) InsertGameGenres(ctx context.Context, arg InsertGameGenresParams) error {
+	_, err := q.db.Exec(ctx, insertGameGenres, arg.GameID, arg.Column2)
+	return err
+}
+
+const insertGamePlatforms = `-- name: InsertGamePlatforms :exec
+INSERT INTO game_platforms (game_id, platform_id)
+SELECT $1, unnest($2::uuid[])
+`
+
+type InsertGamePlatformsParams struct {
+	GameID  pgtype.UUID   `json:"game_id"`
+	Column2 []pgtype.UUID `json:"column_2"`
+}
+
+func (q *Queries) InsertGamePlatforms(ctx context.Context, arg InsertGamePlatformsParams) error {
+	_, err := q.db.Exec(ctx, insertGamePlatforms, arg.GameID, arg.Column2)
+	return err
+}
+
 const listGamesByOwner = `-- name: ListGamesByOwner :many
-SELECT id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at FROM games WHERE owner_id = $1 ORDER BY created_at DESC
+SELECT id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at, video_links, screenshots, banner_url, play_style FROM games WHERE owner_id = $1 ORDER BY created_at DESC
 `
 
 func (q *Queries) ListGamesByOwner(ctx context.Context, ownerID pgtype.UUID) ([]Game, error) {
@@ -179,6 +311,10 @@ func (q *Queries) ListGamesByOwner(ctx context.Context, ownerID pgtype.UUID) ([]
 			&i.Badge,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.VideoLinks,
+			&i.Screenshots,
+			&i.BannerUrl,
+			&i.PlayStyle,
 		); err != nil {
 			return nil, err
 		}
@@ -191,7 +327,7 @@ func (q *Queries) ListGamesByOwner(ctx context.Context, ownerID pgtype.UUID) ([]
 }
 
 const listPublishedGames = `-- name: ListPublishedGames :many
-SELECT id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at FROM games WHERE status = 'published' ORDER BY created_at DESC
+SELECT id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at, video_links, screenshots, banner_url, play_style FROM games WHERE status = 'published' ORDER BY created_at DESC
 `
 
 func (q *Queries) ListPublishedGames(ctx context.Context) ([]Game, error) {
@@ -224,6 +360,10 @@ func (q *Queries) ListPublishedGames(ctx context.Context) ([]Game, error) {
 			&i.Badge,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.VideoLinks,
+			&i.Screenshots,
+			&i.BannerUrl,
+			&i.PlayStyle,
 		); err != nil {
 			return nil, err
 		}
@@ -238,7 +378,7 @@ func (q *Queries) ListPublishedGames(ctx context.Context) ([]Game, error) {
 const publishGame = `-- name: PublishGame :one
 UPDATE games SET status = 'published', updated_at = NOW()
 WHERE id = $1 AND owner_id = $2
-RETURNING id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at
+RETURNING id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at, video_links, screenshots, banner_url, play_style
 `
 
 type PublishGameParams struct {
@@ -270,24 +410,33 @@ func (q *Queries) PublishGame(ctx context.Context, arg PublishGameParams) (Game,
 		&i.Badge,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.VideoLinks,
+		&i.Screenshots,
+		&i.BannerUrl,
+		&i.PlayStyle,
 	)
 	return i, err
 }
 
 const updateGame = `-- name: UpdateGame :one
 UPDATE games
-SET name        = $2,
-    pitch       = $3,
-    description = $4,
-    link_web    = $5,
-    link_android= $6,
-    link_ios    = $7,
-    bg          = $8,
-    players     = $9,
-    tags        = $10,
-    updated_at  = NOW()
-WHERE id = $1 AND owner_id = $11
-RETURNING id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at
+SET name         = $2,
+    pitch        = $3,
+    description  = $4,
+    link_web     = $5,
+    link_android = $6,
+    link_ios     = $7,
+    bg           = $8,
+    players      = $9,
+    tags         = $10,
+    video_links  = $11,
+    screenshots  = $12,
+    banner_url   = $13,
+    play_style   = $14,
+    dev          = $15,
+    updated_at   = NOW()
+WHERE id = $1 AND owner_id = $16
+RETURNING id, owner_id, slug, name, link_web, link_android, link_ios, domain, dev, pitch, description, bg, players, tags, status, like_count, visit_count, badge, created_at, updated_at, video_links, screenshots, banner_url, play_style
 `
 
 type UpdateGameParams struct {
@@ -298,9 +447,14 @@ type UpdateGameParams struct {
 	LinkWeb     pgtype.Text `json:"link_web"`
 	LinkAndroid pgtype.Text `json:"link_android"`
 	LinkIos     pgtype.Text `json:"link_ios"`
-	Bg          string      `json:"bg"`
-	Players     string      `json:"players"`
+	Bg          pgtype.Text `json:"bg"`
+	Players     pgtype.Text `json:"players"`
 	Tags        []string    `json:"tags"`
+	VideoLinks  []string    `json:"video_links"`
+	Screenshots []string    `json:"screenshots"`
+	BannerUrl   pgtype.Text `json:"banner_url"`
+	PlayStyle   pgtype.Text `json:"play_style"`
+	Dev         pgtype.Text `json:"dev"`
 	OwnerID     pgtype.UUID `json:"owner_id"`
 }
 
@@ -316,6 +470,11 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, e
 		arg.Bg,
 		arg.Players,
 		arg.Tags,
+		arg.VideoLinks,
+		arg.Screenshots,
+		arg.BannerUrl,
+		arg.PlayStyle,
+		arg.Dev,
 		arg.OwnerID,
 	)
 	var i Game
@@ -340,6 +499,10 @@ func (q *Queries) UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, e
 		&i.Badge,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.VideoLinks,
+		&i.Screenshots,
+		&i.BannerUrl,
+		&i.PlayStyle,
 	)
 	return i, err
 }

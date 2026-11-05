@@ -19,4 +19,8 @@ type Repository interface {
 	Delete(ctx context.Context, params sqlcgen.DeleteGameParams) error
 	GetRelated(ctx context.Context, excludeID pgtype.UUID, tags []string) ([]sqlcgen.Game, error)
 	IncrementVisitCount(ctx context.Context, id pgtype.UUID) error
+	UpsertGenres(ctx context.Context, gameID pgtype.UUID, genreIDs []pgtype.UUID) error
+	UpsertPlatforms(ctx context.Context, gameID pgtype.UUID, platformIDs []pgtype.UUID) error
+	GetGenres(ctx context.Context, gameID pgtype.UUID) ([]sqlcgen.GetGameGenresRow, error)
+	GetPlatforms(ctx context.Context, gameID pgtype.UUID) ([]sqlcgen.GetGamePlatformsRow, error)
 }

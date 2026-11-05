@@ -10,6 +10,12 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type CommentLike struct {
+	UserID    pgtype.UUID        `json:"user_id"`
+	CommentID pgtype.UUID        `json:"comment_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type Game struct {
 	ID          pgtype.UUID        `json:"id"`
 	OwnerID     pgtype.UUID        `json:"owner_id"`
@@ -19,11 +25,11 @@ type Game struct {
 	LinkAndroid pgtype.Text        `json:"link_android"`
 	LinkIos     pgtype.Text        `json:"link_ios"`
 	Domain      pgtype.Text        `json:"domain"`
-	Dev         string             `json:"dev"`
+	Dev         pgtype.Text        `json:"dev"`
 	Pitch       string             `json:"pitch"`
 	Description []byte             `json:"description"`
-	Bg          string             `json:"bg"`
-	Players     string             `json:"players"`
+	Bg          pgtype.Text        `json:"bg"`
+	Players     pgtype.Text        `json:"players"`
 	Tags        []string           `json:"tags"`
 	Status      string             `json:"status"`
 	LikeCount   int32              `json:"like_count"`
@@ -31,6 +37,10 @@ type Game struct {
 	Badge       pgtype.Text        `json:"badge"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	VideoLinks  []string           `json:"video_links"`
+	Screenshots []string           `json:"screenshots"`
+	BannerUrl   pgtype.Text        `json:"banner_url"`
+	PlayStyle   pgtype.Text        `json:"play_style"`
 }
 
 type GameComment struct {
@@ -40,6 +50,8 @@ type GameComment struct {
 	Content   string             `json:"content"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	Anonymous bool               `json:"anonymous"`
+	LikeCount int32              `json:"like_count"`
 }
 
 type GameGenre struct {
@@ -77,6 +89,22 @@ type Platform struct {
 	ID        pgtype.UUID        `json:"id"`
 	Name      string             `json:"name"`
 	Slug      string             `json:"slug"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type PlayStyle struct {
+	ID        pgtype.UUID        `json:"id"`
+	Name      string             `json:"name"`
+	Slug      string             `json:"slug"`
+	Sort      int32              `json:"sort"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type PlayerCount struct {
+	ID        pgtype.UUID        `json:"id"`
+	Name      string             `json:"name"`
+	Slug      string             `json:"slug"`
+	Sort      int32              `json:"sort"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 

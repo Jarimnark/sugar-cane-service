@@ -66,3 +66,39 @@ func (r *repo) GetRelated(ctx context.Context, excludeID pgtype.UUID, tags []str
 func (r *repo) IncrementVisitCount(ctx context.Context, id pgtype.UUID) error {
 	return r.queries(ctx).IncrementVisitCount(ctx, id)
 }
+
+func (r *repo) UpsertGenres(ctx context.Context, gameID pgtype.UUID, genreIDs []pgtype.UUID) error {
+	q := r.queries(ctx)
+	if err := q.DeleteGameGenres(ctx, gameID); err != nil {
+		return err
+	}
+	if len(genreIDs) == 0 {
+		return nil
+	}
+	return q.InsertGameGenres(ctx, sqlcgen.InsertGameGenresParams{
+		GameID:  gameID,
+		Column2: genreIDs,
+	})
+}
+
+func (r *repo) UpsertPlatforms(ctx context.Context, gameID pgtype.UUID, platformIDs []pgtype.UUID) error {
+	q := r.queries(ctx)
+	if err := q.DeleteGamePlatforms(ctx, gameID); err != nil {
+		return err
+	}
+	if len(platformIDs) == 0 {
+		return nil
+	}
+	return q.InsertGamePlatforms(ctx, sqlcgen.InsertGamePlatformsParams{
+		GameID:  gameID,
+		Column2: platformIDs,
+	})
+}
+
+func (r *repo) GetGenres(ctx context.Context, gameID pgtype.UUID) ([]sqlcgen.GetGameGenresRow, error) {
+	return r.queries(ctx).GetGameGenres(ctx, gameID)
+}
+
+func (r *repo) GetPlatforms(ctx context.Context, gameID pgtype.UUID) ([]sqlcgen.GetGamePlatformsRow, error) {
+	return r.queries(ctx).GetGamePlatforms(ctx, gameID)
+}

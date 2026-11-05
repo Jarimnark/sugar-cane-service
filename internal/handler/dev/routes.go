@@ -15,6 +15,7 @@ import (
 func (h *Handler) MountAuthed(r chi.Router) {
 	r.Get("/me/game", h.ListMyGames)
 	r.Post("/me/game", h.CreateOrUpdateGame)
+	r.Post("/me/game/screenshot", h.UploadScreenshot)
 	r.Get("/me/game/{id}", h.GetMyGame)
 	r.Delete("/me/game/{id}", h.DeleteMyGame)
 }

@@ -45,3 +45,7 @@ func (r *repo) DeleteByUserAndProvider(ctx context.Context, userID pgtype.UUID, 
 		Provider: provider,
 	})
 }
+
+func (r *repo) ListByUser(ctx context.Context, userID pgtype.UUID) ([]sqlcgen.OauthAccount, error) {
+	return r.queries(ctx).ListOAuthAccountsByUser(ctx, userID)
+}

@@ -7,8 +7,11 @@ install-tools:
 	go install github.com/pressly/goose/v3/cmd/goose@$(GOOSE_VERSION)
 	go install github.com/sqlc-dev/sqlc/cmd/sqlc@$(SQLC_VERSION)
 
+ENV_FILE ?= .env
+LOAD_ENV = set -a; . ./$(ENV_FILE); set +a
+
 run:
-	go run ./cmd/api
+	$(LOAD_ENV); go run ./cmd/api
 
 build:
 	go build -o bin/api ./cmd/api
@@ -20,13 +23,13 @@ lint:
 	go build ./... && go vet ./...
 
 migrate-up:
-	goose -dir db/migrations postgres "$(DATABASE_URL)" up
+	$(LOAD_ENV); goose -dir db/migrations postgres "$$DATABASE_URL" up
 
 migrate-down:
-	goose -dir db/migrations postgres "$(DATABASE_URL)" down
+	$(LOAD_ENV); goose -dir db/migrations postgres "$$DATABASE_URL" down
 
 migrate-status:
-	goose -dir db/migrations postgres "$(DATABASE_URL)" status
+	$(LOAD_ENV); goose -dir db/migrations postgres "$$DATABASE_URL" status
 
 sqlc:
 	sqlc generate

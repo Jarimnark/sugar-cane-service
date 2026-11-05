@@ -40,6 +40,9 @@ func (f *fakeUserRepo) GetByEmail(_ context.Context, _ string) (sqlcgen.User, er
 func (f *fakeUserRepo) UpdateProfile(ctx context.Context, params sqlcgen.UpdateUserProfileParams) (sqlcgen.User, error) {
 	return f.updateProfileFn(ctx, params)
 }
+func (f *fakeUserRepo) UpdatePhoto(_ context.Context, _ sqlcgen.UpdateUserPhotoParams) (sqlcgen.User, error) {
+	panic("not needed in setting tests")
+}
 func (f *fakeUserRepo) VerifyEmail(_ context.Context, _ pgtype.UUID) error {
 	panic("not needed in setting tests")
 }
@@ -63,6 +66,9 @@ func (f *fakeOAuthRepo) Create(_ context.Context, _ pgtype.UUID, _, _ string) (s
 func (f *fakeOAuthRepo) DeleteByUserAndProvider(ctx context.Context, userID pgtype.UUID, provider string) error {
 	return f.deleteByUserAndProviderFn(ctx, userID, provider)
 }
+func (f *fakeOAuthRepo) ListByUser(_ context.Context, _ pgtype.UUID) ([]sqlcgen.OauthAccount, error) {
+	panic("not needed in setting tests")
+}
 
 var _ oauthrepo.Repository = (*fakeOAuthRepo)(nil)
 
@@ -85,6 +91,12 @@ func (f *fakeSessionRepo) Delete(_ context.Context, _ string) error {
 }
 func (f *fakeSessionRepo) DeleteAllForUser(ctx context.Context, userID pgtype.UUID) error {
 	return f.deleteAllForUserFn(ctx, userID)
+}
+func (f *fakeSessionRepo) ListForUser(_ context.Context, _ pgtype.UUID) ([]sqlcgen.Session, error) {
+	panic("not needed in setting tests")
+}
+func (f *fakeSessionRepo) DeleteAllForUserExcept(_ context.Context, _ pgtype.UUID, _ string) error {
+	panic("not needed in setting tests")
 }
 
 var _ sessionrepo.Repository = (*fakeSessionRepo)(nil)

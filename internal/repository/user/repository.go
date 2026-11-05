@@ -13,6 +13,7 @@ type Repository interface {
 	GetByID(ctx context.Context, id pgtype.UUID) (sqlcgen.User, error)
 	GetByEmail(ctx context.Context, email string) (sqlcgen.User, error)
 	UpdateProfile(ctx context.Context, params sqlcgen.UpdateUserProfileParams) (sqlcgen.User, error)
+	UpdatePhoto(ctx context.Context, params sqlcgen.UpdateUserPhotoParams) (sqlcgen.User, error)
 	VerifyEmail(ctx context.Context, id pgtype.UUID) error
 	SoftDelete(ctx context.Context, id pgtype.UUID) error
 }

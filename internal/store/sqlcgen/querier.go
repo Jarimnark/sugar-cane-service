@@ -11,44 +11,70 @@ import (
 )
 
 type Querier interface {
+	CountCommentsForGame(ctx context.Context, gameID pgtype.UUID) (int64, error)
 	CountGamesByGenre(ctx context.Context) ([]CountGamesByGenreRow, error)
 	CountGamesByPlatform(ctx context.Context) ([]CountGamesByPlatformRow, error)
 	CreateGame(ctx context.Context, arg CreateGameParams) (Game, error)
 	CreateOAuthAccount(ctx context.Context, arg CreateOAuthAccountParams) (OauthAccount, error)
 	CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	DecrementCommentLikeCount(ctx context.Context, id pgtype.UUID) error
 	DecrementLikeCount(ctx context.Context, id pgtype.UUID) error
+	DeleteComment(ctx context.Context, arg DeleteCommentParams) error
+	DeleteCommentLike(ctx context.Context, arg DeleteCommentLikeParams) error
 	DeleteGame(ctx context.Context, arg DeleteGameParams) error
+	DeleteGameGenres(ctx context.Context, gameID pgtype.UUID) error
 	DeleteGameLike(ctx context.Context, arg DeleteGameLikeParams) error
+	DeleteGamePlatforms(ctx context.Context, gameID pgtype.UUID) error
 	DeleteOAuthAccountByUserAndProvider(ctx context.Context, arg DeleteOAuthAccountByUserAndProviderParams) error
 	DeleteSavedGame(ctx context.Context, arg DeleteSavedGameParams) error
 	DeleteSession(ctx context.Context, id string) error
 	DeleteUserSessions(ctx context.Context, userID pgtype.UUID) error
+	DeleteUserSessionsExcept(ctx context.Context, arg DeleteUserSessionsExceptParams) error
+	GameExists(ctx context.Context, id pgtype.UUID) (bool, error)
+	GetCommentByID(ctx context.Context, id pgtype.UUID) (GameComment, error)
+	GetCommentWithAuthor(ctx context.Context, id pgtype.UUID) (GetCommentWithAuthorRow, error)
 	GetGameByID(ctx context.Context, id pgtype.UUID) (Game, error)
 	GetGameBySlug(ctx context.Context, slug string) (Game, error)
+	GetGameGenres(ctx context.Context, gameID pgtype.UUID) ([]GetGameGenresRow, error)
+	GetGamePlatforms(ctx context.Context, gameID pgtype.UUID) ([]GetGamePlatformsRow, error)
 	GetHomeNew(ctx context.Context) ([]Game, error)
 	GetHomePopular(ctx context.Context) ([]Game, error)
 	GetHomeTrending(ctx context.Context) ([]Game, error)
 	GetOAuthAccount(ctx context.Context, arg GetOAuthAccountParams) (OauthAccount, error)
+	GetPlayStyleBySlug(ctx context.Context, slug string) (GetPlayStyleBySlugRow, error)
+	GetPlayerCountBySlug(ctx context.Context, slug string) (GetPlayerCountBySlugRow, error)
 	GetRelatedGames(ctx context.Context, arg GetRelatedGamesParams) ([]Game, error)
 	GetSession(ctx context.Context, id string) (Session, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id pgtype.UUID) (User, error)
+	IncrementCommentLikeCount(ctx context.Context, id pgtype.UUID) error
 	IncrementLikeCount(ctx context.Context, id pgtype.UUID) error
 	IncrementVisitCount(ctx context.Context, id pgtype.UUID) error
+	InsertComment(ctx context.Context, arg InsertCommentParams) (GameComment, error)
+	InsertCommentLike(ctx context.Context, arg InsertCommentLikeParams) error
+	InsertGameGenres(ctx context.Context, arg InsertGameGenresParams) error
 	InsertGameLike(ctx context.Context, arg InsertGameLikeParams) error
+	InsertGamePlatforms(ctx context.Context, arg InsertGamePlatformsParams) error
 	InsertSavedGame(ctx context.Context, arg InsertSavedGameParams) error
+	ListCommentsForGameNewest(ctx context.Context, arg ListCommentsForGameNewestParams) ([]ListCommentsForGameNewestRow, error)
+	ListCommentsForGameTop(ctx context.Context, arg ListCommentsForGameTopParams) ([]ListCommentsForGameTopRow, error)
 	ListGamesByOwner(ctx context.Context, ownerID pgtype.UUID) ([]Game, error)
 	ListGamesFiltered(ctx context.Context, arg ListGamesFilteredParams) ([]Game, error)
 	ListGenres(ctx context.Context) ([]Genre, error)
+	ListOAuthAccountsByUser(ctx context.Context, userID pgtype.UUID) ([]OauthAccount, error)
 	ListPlatforms(ctx context.Context) ([]Platform, error)
+	ListPlayStyles(ctx context.Context) ([]ListPlayStylesRow, error)
+	ListPlayerCounts(ctx context.Context) ([]ListPlayerCountsRow, error)
 	ListPublishedGames(ctx context.Context) ([]Game, error)
 	ListSavedGamesByUser(ctx context.Context, userID pgtype.UUID) ([]Game, error)
+	ListUserSessions(ctx context.Context, userID pgtype.UUID) ([]Session, error)
 	PublishGame(ctx context.Context, arg PublishGameParams) (Game, error)
 	SoftDeleteUser(ctx context.Context, id pgtype.UUID) error
 	SuggestGames(ctx context.Context, dollar_1 string) ([]SuggestGamesRow, error)
 	TouchSession(ctx context.Context, id string) error
 	UpdateGame(ctx context.Context, arg UpdateGameParams) (Game, error)
+	UpdateUserPhoto(ctx context.Context, arg UpdateUserPhotoParams) (User, error)
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error)
 	VerifyUserEmail(ctx context.Context, id pgtype.UUID) error
 }
