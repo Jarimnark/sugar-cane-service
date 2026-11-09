@@ -80,11 +80,15 @@ services:
       MINIO_DEFAULT_BUCKETS: ${S3_BUCKET}
     volumes:
       - miniodata:/bitnami/minio/data
+    # Bitnami minideb-based image ships bash; use the /dev/tcp pseudo-device
+    # to confirm port 9000 is accepting connections. Independent of curl/wget
+    # availability, which can change across image updates.
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:9000/minio/health/ready || exit 1"]
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/9000' || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
+      start_period: 20s
     mem_limit: 384m
     networks:
       - internal
