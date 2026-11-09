@@ -5,6 +5,7 @@ services:
     env_file: .env
     environment:
       S3_ENDPOINT:
+      S3_PUBLIC_BASE_URL:
       S3_BUCKET:
       S3_ACCESS_KEY:
       S3_SECRET_KEY:
@@ -23,6 +24,8 @@ services:
       - "8080"
     depends_on:
       postgres:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1:8080/healthz || exit 1"]
@@ -68,6 +71,24 @@ services:
     networks:
       - internal
 
+  minio:
+    image: bitnamilegacy/minio:latest
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_DEFAULT_BUCKETS: ${S3_BUCKET}
+    volumes:
+      - miniodata:/bitnami/minio/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:9000/minio/health/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    mem_limit: 384m
+    networks:
+      - internal
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -81,6 +102,7 @@ services:
       ACME_CA: ${ACME_CA}
       CADDY_INGRESS_API: ${APP_SERVICE_HOST:-app}:${APP_PORT_INTERNAL:-8080}
       CADDY_INGRESS_WEB: ${WEB_SERVICE_HOST:-web}:${WEB_PORT_INTERNAL:-3000}
+      CADDY_INGRESS_MEDIA: ${MINIO_SERVICE_HOST:-minio}:${MINIO_PORT_INTERNAL:-9000}
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -93,6 +115,7 @@ volumes:
   pgdata:
   caddy_data:
   caddy_config:
+  miniodata:
 
 networks:
   internal:

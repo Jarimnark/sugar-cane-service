@@ -11,6 +11,9 @@
 	handle_path /api/* {
 		reverse_proxy {$CADDY_INGRESS_API}
 	}
+	handle_path /media/* {
+		reverse_proxy {$CADDY_INGRESS_MEDIA}
+	}
 	handle {
 		reverse_proxy {$CADDY_INGRESS_WEB}
 	}

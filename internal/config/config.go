@@ -11,10 +11,11 @@ type Config struct {
 	CookieDomain string
 	CookieSecure bool
 	CORSOrigin   string
-	S3Endpoint   string
-	S3Bucket     string
-	S3AccessKey  string
-	S3SecretKey  string
+	S3Endpoint      string
+	S3PublicBaseURL string
+	S3Bucket        string
+	S3AccessKey     string
+	S3SecretKey     string
 
 	// OAuth
 	GoogleClientID     string
@@ -63,6 +64,11 @@ func Load() (*Config, error) {
 	c.GoogleClientSecret = os.Getenv("GOOGLE_CLIENT_SECRET")
 	c.FacebookAppID = os.Getenv("FACEBOOK_APP_ID")
 	c.FacebookAppSecret = os.Getenv("FACEBOOK_APP_SECRET")
+
+	// Optional. When set, backend returns this base in upload URLs instead of
+	// S3Endpoint so browsers can reach objects through a public hostname
+	// while the backend itself connects to the storage via the internal one.
+	c.S3PublicBaseURL = os.Getenv("S3_PUBLIC_BASE_URL")
 
 	c.CookieSecure = os.Getenv("COOKIE_SECURE") == "true"
 	if c.Port = os.Getenv("PORT"); c.Port == "" {

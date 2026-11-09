@@ -15,10 +15,11 @@ import (
 )
 
 type Client struct {
-	mc       *minio.Client
-	bucket   string
-	endpoint string
-	secure   bool
+	mc         *minio.Client
+	bucket     string
+	endpoint   string // for connecting (may be internal docker DNS)
+	publicBase string // for URLs returned to callers (browser-reachable)
+	secure     bool
 }
 
 func New(ctx context.Context, cfg *config.Config) (*Client, error) {
@@ -40,7 +41,13 @@ func New(ctx context.Context, cfg *config.Config) (*Client, error) {
 		return nil, fmt.Errorf("init minio client: %w", err)
 	}
 
-	c := &Client{mc: mc, bucket: cfg.S3Bucket, endpoint: strings.TrimRight(cfg.S3Endpoint, "/"), secure: secure}
+	c := &Client{
+		mc:         mc,
+		bucket:     cfg.S3Bucket,
+		endpoint:   strings.TrimRight(cfg.S3Endpoint, "/"),
+		publicBase: strings.TrimRight(cfg.S3PublicBaseURL, "/"),
+		secure:     secure,
+	}
 	if err := c.ensureBucket(ctx); err != nil {
 		return nil, err
 	}
@@ -71,7 +78,11 @@ func (c *Client) PutObject(ctx context.Context, prefix string, reader io.Reader,
 	if err != nil {
 		return "", fmt.Errorf("put object: %w", err)
 	}
-	return fmt.Sprintf("%s/%s/%s", c.endpoint, c.bucket, key), nil
+	base := c.publicBase
+	if base == "" {
+		base = c.endpoint
+	}
+	return fmt.Sprintf("%s/%s/%s", base, c.bucket, key), nil
 }
 
 func extensionFromContentType(ct string) string {
