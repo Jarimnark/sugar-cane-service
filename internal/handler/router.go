@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -22,6 +24,7 @@ func NewRouter(
 	dev *devhandler.Handler,
 	comments *commenthandler.Handler,
 	sessions sessionrepo.Repository,
+	mcp http.Handler, // nil = MCP endpoint disabled
 ) chi.Router {
 	r := chi.NewRouter()
 
@@ -30,6 +33,12 @@ func NewRouter(
 	r.Use(middleware.Recoverer)
 
 	r.Get("/healthz", handleHealthz)
+
+	// MCP (Model Context Protocol) endpoint for AI clients. Authenticated by
+	// its own bearer token, not by session cookies. Public URL: /api/mcp.
+	if mcp != nil {
+		r.Handle("/mcp", mcp)
+	}
 
 	r.Route("/api/v1", func(r chi.Router) {
 		auth.MountPublic(r)

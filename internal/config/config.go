@@ -24,6 +24,10 @@ type Config struct {
 	FacebookAppSecret  string
 	OAuthRedirectBase  string
 	FrontendURL        string
+
+	// MCP endpoint (optional). Empty MCPToken = endpoint disabled.
+	MCPToken  string
+	MCPUserID string
 }
 
 func Load() (*Config, error) {
@@ -69,6 +73,19 @@ func Load() (*Config, error) {
 	// S3Endpoint so browsers can reach objects through a public hostname
 	// while the backend itself connects to the storage via the internal one.
 	c.S3PublicBaseURL = os.Getenv("S3_PUBLIC_BASE_URL")
+
+	// Optional MCP endpoint. When MCP_TOKEN is set, MCP_USER_ID (the Hopbu
+	// account the MCP tools act as) is required and the token must be long.
+	c.MCPToken = os.Getenv("MCP_TOKEN")
+	c.MCPUserID = os.Getenv("MCP_USER_ID")
+	if c.MCPToken != "" {
+		if len(c.MCPToken) < 32 {
+			return nil, fmt.Errorf("MCP_TOKEN must be at least 32 characters")
+		}
+		if c.MCPUserID == "" {
+			return nil, fmt.Errorf("MCP_USER_ID is required when MCP_TOKEN is set")
+		}
+	}
 
 	c.CookieSecure = os.Getenv("COOKIE_SECURE") == "true"
 	if c.Port = os.Getenv("PORT"); c.Port == "" {

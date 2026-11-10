@@ -87,6 +87,15 @@ func main() {
 	devService := devsvc.New(games, users)
 	commentService := commentsvc.New(comments, pool)
 
+	mcpHandler, err := newMCPHandler(cfg, devService, gameService, storageClient)
+	if err != nil {
+		slog.Error("mcp", "error", err)
+		os.Exit(1)
+	}
+	if mcpHandler != nil {
+		slog.Info("mcp endpoint enabled", "path", "/mcp")
+	}
+
 	r := handler.NewRouter(
 		authhandler.New(authService, cfg),
 		settinghandler.New(settingService),
@@ -95,6 +104,7 @@ func main() {
 		devhandler.New(devService, storageClient),
 		commenthandler.New(commentService),
 		sessions,
+		mcpHandler,
 	)
 
 	addr := fmt.Sprintf(":%s", cfg.Port)

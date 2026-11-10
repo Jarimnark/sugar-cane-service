@@ -136,6 +136,32 @@ The Next.js app (`sugar-cane-web`) runs on `http://localhost:3000`. The backend 
 make lint && make test
 ```
 
+## MCP endpoint (AI clients)
+
+`POST /mcp` (public URL `/api/mcp` behind Caddy) is a Model Context Protocol
+server so Claude and other MCP clients can manage games. It is stateless,
+JSON-only Streamable HTTP, and **off unless `MCP_TOKEN` is set**.
+
+| Variable | Meaning |
+|---|---|
+| `MCP_TOKEN` | Shared secret, at least 32 chars (`openssl rand -hex 32`). Clients send `Authorization: Bearer <token>`. |
+| `MCP_USER_ID` | UUID of the Hopbu user the tools act as. Every write is owned by this user. |
+
+Tools: `list_options`, `list_my_games`, `get_my_game`, `save_game`
+(create, or update only the fields sent; draft unless `publish: true`;
+genres/platforms by name), `upload_image_from_url` (server downloads a
+JPEG/PNG/WebP up to 2 MB and stores it; refuses private/internal addresses).
+
+Connect from Claude Code:
+
+```bash
+claude mcp add --transport http hopbu http://<host>/api/mcp \
+  --header "Authorization: Bearer $MCP_TOKEN"
+```
+
+Code: `internal/mcp` (protocol, stdlib only), `internal/mcp/hopbu` (tools),
+`cmd/api/mcp.go` (wiring).
+
 ## Security checklist
 
 - [ ] Passwords hashed with argon2id
