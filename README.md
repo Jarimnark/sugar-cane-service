@@ -147,6 +147,10 @@ JSON-only Streamable HTTP, and **off unless `MCP_TOKEN` is set**.
 | `MCP_TOKEN` | Shared secret, at least 32 chars (`openssl rand -hex 32`). Clients send `Authorization: Bearer <token>`. |
 | `MCP_USER_ID` | UUID of the Hopbu user the tools act as. Every write is owned by this user. |
 
+On the droplets these come from the GitHub environment (`staging` /
+`production`): secret `MCP_TOKEN` + variable `MCP_USER_ID`. The deploy job
+appends them to `.env` only when both are set.
+
 Tools: `list_options`, `list_my_games`, `get_my_game`, `save_game`
 (create, or update only the fields sent; draft unless `publish: true`;
 genres/platforms by name), `upload_image_from_url` (server downloads a

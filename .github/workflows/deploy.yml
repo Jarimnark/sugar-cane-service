@@ -114,9 +114,20 @@ jobs:
       - name: Render env file from GitHub Secrets
         env:
           ENV_B64: ${{ steps.host.outputs.env_b64 }}
+          # Optional MCP endpoint, set per GitHub environment:
+          # secret MCP_TOKEN + variable MCP_USER_ID. Added only when both
+          # are set, because the API refuses to start with just one.
+          MCP_TOKEN: ${{ secrets.MCP_TOKEN }}
+          MCP_USER_ID: ${{ vars.MCP_USER_ID }}
         run: |
           set -e
           echo "$ENV_B64" | base64 -d > "$ENV_FILE"
+          if [ -n "$MCP_TOKEN" ] && [ -n "$MCP_USER_ID" ]; then
+            printf '\nMCP_TOKEN=%s\nMCP_USER_ID=%s\n' "$MCP_TOKEN" "$MCP_USER_ID" >> "$ENV_FILE"
+            echo "MCP endpoint: enabled"
+          else
+            echo "MCP endpoint: disabled (MCP_TOKEN secret / MCP_USER_ID variable not set)"
+          fi
           chmod 644 "$ENV_FILE"
 
       - name: Upload env file to droplet
